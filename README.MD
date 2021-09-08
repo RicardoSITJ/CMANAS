@@ -106,13 +106,40 @@ Using CIFAR-10, CIFAR-100, ImageNet16-120:
 ![NAS201_table](imgs/NAS201.png)
 
 #### Visualizing the Mean of the Normal Distribution
+Architecture Search using weight sharing based CMANAS on
 <table>
   <tr>
-     <th>Architecture Search using CIFAR-10</th>
-     <th>Architecture Search using CIFAR-100</th>
+     <th>CIFAR-10</th>
+     <th>CIFAR-100</th>
   </tr>
   <tr>
-    <td><img src="imgs/CMANAS-C10.gif" width="400" /></td>
-    <td><img src="imgs/CMANAS-C100.gif" width="400" /></td>
+    <td><img src="imgs/c10_mean_shared.gif" width="400" /></td>
+    <td><img src="imgs/c100_mean_shared.gif" width="400" /></td>
   </tr>
+  <tr>
+     <th colspan="2">ImageNet16-120</th>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="imgs/img16_mean_shared.gif" width="400" /></td>
+  </tr>
+
+</table>
+
+Architecture Search using non-weight sharing based CMANAS on
+<table>
+  <tr>
+     <th>CIFAR-10</th>
+     <th>CIFAR-100</th>
+  </tr>
+  <tr>
+    <td><img src="imgs/c10_mean_nonshared.gif" width="400" /></td>
+    <td><img src="imgs/c100_mean_nonshared.gif" width="400" /></td>
+  </tr>
+  <tr>
+     <th colspan="2">ImageNet16-120</th>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="imgs/img16_mean_nonshared.gif" width="400" /></td>
+  </tr>
+
 </table>
