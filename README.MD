@@ -36,12 +36,17 @@ bash ./s1/arch_search.sh cifar100 0 1 model
 <table>
   <tr>
      <th>Search Results on CIFAR-10</th>
+  </tr>
+  <tr>
+    <td><img src="imgs/cifar10_results.png" width="828" /></td>
+  </tr>
+  <tr>
      <th>Search Results on CIFAR-100</th>
   </tr>
   <tr>
-    <td><img src="imgs/cifar10_results.png" width="400" height="374" /></td>
-    <td><img src="imgs/cifar100_results.png" width="400" height="374" /></td>
+    <td><img src="imgs/cifar100_results.png" width="828" /></td>
   </tr>
+
 </table>
 
 #### Testing the discovered cells
