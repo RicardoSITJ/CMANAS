@@ -7,7 +7,7 @@ echo $# arguments
 dataset=$1
 gpu=$2
 arch_dir=$3
-epochs=2
+epochs=600
 
 data_path="../../../data"
 
