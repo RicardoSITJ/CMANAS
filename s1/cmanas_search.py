@@ -154,7 +154,8 @@ def evaluate(valid_loader, criterion, df, alphas, model, gen, trained_models, al
     # Appending the newly sample architecture to the main dataframe
     d_tmp = {'genotype': genotype_tmp, 'arch_loss': arch_loss_list, 'arch_top1': arch_top1_list, 'arch_score': arch_top1_list[0],
              'arch_top5': arch_top5_list, 'arch': alphax, 'generation': gen}
-    df = df.append(d_tmp, ignore_index=True)
+    # df = df.append(d_tmp, ignore_index=True)
+    df = pd.concat([df, pd.DataFrame([d_tmp])], ignore_index=True)
     
   logging.info(f'[INFO] architecture stats: Loss: {arch_loss_list} with top5: {arch_top5_list}')
   logging.info(f'[INFO] Score (top1) of the architecture, {arch_top1_list}')
