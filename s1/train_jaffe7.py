@@ -218,6 +218,7 @@ def main():
         logging.info("=" * 100)
 
     logging.info(f"best_acc: {best_acc_top1.item()}, valid_acc: {valid_acc.item()}")
+    print(f"best_acc: {best_acc_top1.item()}, valid_acc: {valid_acc.item()}")
 
     with open("{}/test_error.pickle".format(args.save), "wb") as f:
         pickle.dump(test_error, f)
