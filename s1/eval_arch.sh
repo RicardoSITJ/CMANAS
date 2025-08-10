@@ -8,7 +8,7 @@ dataset=$1
 gpu=$2
 arch_dir=$3
 # epochs=600
-epochs=100
+epochs=300
 
 data_path="../../../data"
 
