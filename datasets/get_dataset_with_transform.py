@@ -202,7 +202,9 @@ def get_datasets(name, root, cutout):
     elif name == "jaffe7":
         lists = [
             transforms.Resize((32, 32)),
-            transforms.RandomHorizontalFlip(),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomRotation(15),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2),
             transforms.RandomCrop(32, padding=4),
             transforms.ToTensor(),
             transforms.Normalize(mean, std),
