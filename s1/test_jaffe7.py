@@ -126,7 +126,7 @@ def main():
     # model.drop_path_prob = args.drop_path_prob
     test_acc, test_obj = infer(test_queue, model, criterion)
     logging.info("test_acc %f", test_acc)
-    print(f"test_acc {test_acc.item()}")
+    print(f"test_acc {test_acc}")
 
 
 def infer(test_queue, model, criterion):
