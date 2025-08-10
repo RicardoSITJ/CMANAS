@@ -14,6 +14,8 @@ data_path="../../../data"
 
 if [ "$dataset" == "cifar10" ] ; then
   python ./s1/train_cifar10.py --cutout --auxiliary --epochs ${epochs} --dir ${arch_dir} --data ${data_path} --gpu ${gpu}
+elif [ "$dataset" == "jaffe7" ] ; then
+  python ./s1/train_jaffe7.py --cutout --auxiliary --epochs ${epochs} --dir ${arch_dir} --data ${data_path} --gpu ${gpu}
 else
   python ./s1/train_cifar100.py --cutout --auxiliary --epochs ${epochs} --dir ${arch_dir} --data ${data_path} --gpu ${gpu}
 fi
