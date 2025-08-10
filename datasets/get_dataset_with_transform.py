@@ -260,10 +260,8 @@ def get_datasets(name, root, cutout):
         test_data = ImageNet16(root, False, test_transform, 200)
         assert len(train_data) == 254775 and len(test_data) == 10000
     elif name == "jaffe7":
-        folder_path = (
-            "/Users/ricardosantiago/Desktop/fer_programacion/JAFFE/3451524/dataset"
-        )
-        train_data = dset.ImageFolder(os.join(folder_path, "train"), train_transform)
+        folder_path = "datasets/jaffe_dataset"
+        train_data = dset.ImageFolder(osp.join(folder_path, "train"), train_transform)
         test_data = dset.ImageFolder(osp.join(folder_path, "val"), test_transform)
     else:
         raise TypeError("Unknow dataset : {:}".format(name))
