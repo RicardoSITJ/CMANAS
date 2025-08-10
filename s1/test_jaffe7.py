@@ -110,7 +110,7 @@ def main():
     criterion = criterion.cuda()
 
     _, test_transform = ut._data_transforms_jaffe7(args)
-    folder_path = "../datasets/jaffe_dataset"
+    folder_path = "/kaggle/working/CMANAS/datasets/jaffe_dataset"
     test_data = dset.ImageFolder(osp.join(folder_path, "test"), test_transform)
 
     test_queue = torch.utils.data.DataLoader(

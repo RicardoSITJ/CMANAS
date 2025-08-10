@@ -148,7 +148,7 @@ def main():
     )
 
     train_transform, valid_transform = ut._data_transforms_jaffe7(args)
-    folder_path = "../datasets/jaffe_dataset"
+    folder_path = "/kaggle/working/CMANAS/datasets/jaffe_dataset"
     train_data = dset.ImageFolder(osp.join(folder_path, "train"), train_transform)
     valid_data = dset.ImageFolder(osp.join(folder_path, "val"), valid_transform)
     logging.info(
