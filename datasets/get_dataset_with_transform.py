@@ -14,14 +14,17 @@ from .SearchDatasetWrap import SearchDataset
 from config_utils import load_config
 
 
-Dataset2Class = {'cifar10' : 10,
-                 'cifar100': 100,
-                 'imagenet-1k-s':1000,
-                 'imagenet-1k' : 1000,
-                 'ImageNet16'  : 1000,
-                 'ImageNet16-150': 150,
-                 'ImageNet16-120': 120,
-                 'ImageNet16-200': 200}
+Dataset2Class = {
+    "jaffe7": 7,
+    "cifar10": 10,
+    "cifar100": 100,
+    "imagenet-1k-s": 1000,
+    "imagenet-1k": 1000,
+    "ImageNet16": 1000,
+    "ImageNet16-150": 150,
+    "ImageNet16-120": 120,
+    "ImageNet16-200": 200,
+}
 
 
 class CUTOUT(object):
