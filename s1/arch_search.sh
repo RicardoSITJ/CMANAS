@@ -6,9 +6,9 @@ gpu=$2
 output_dir="./outputs/s1/exp-${dataset}-search-$3"
 model_name="$4.pt"
 # epochs=100
-epochs=2
+epochs=10
 # cmanas_epochs=100
-cmanas_epochs=2
+cmanas_epochs=10
 C100_split=2
 
 if [ -d "${output_dir}" ]; then
