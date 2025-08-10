@@ -8,6 +8,7 @@ import torchvision.datasets as dset
 import torchvision.transforms as transforms
 from copy import deepcopy
 from PIL import Image
+import json
 
 from .DownsampledImageNet import ImageNet16
 from .SearchDatasetWrap import SearchDataset
@@ -322,21 +323,24 @@ def get_nas_search_loaders(
             num_workers=workers,
             pin_memory=True,
         )
+
     elif dataset == "jaffe7":
-        # split_Fpath = 'configs/nas-benchmark/cifar-split.txt'
-        cifar_split = load_config("{:}/jaffe-split.txt".format(config_root), None, None)
-        train_split, valid_split = (
-            cifar_split.train,
-            cifar_split.valid,
-        )  # search over the proposed training and validation set
-        # logger.log('Load split file from {:}'.format(split_Fpath))      # they are two disjoint groups in the original CIFAR-10 training set
-        # To split data
+        # Carga splits desde jaffe-split.txt
+        with open("{:}/jaffe-split.txt".format(config_root), "r") as f:
+            split_data = json.load(f)
+
+        # Convierte índices de strings a enteros y a lista (no set)
+        train_split = list(map(int, split_data["train"][1]))
+        valid_split = list(map(int, split_data["valid"][1]))
+        test_split = list(map(int, split_data["test"][1]))  # si usarás test
+
+        # Copia dataset para validación con transform distinto
         xvalid_data = deepcopy(train_data)
-        if hasattr(xvalid_data, "transforms"):  # to avoid a print issue
-            xvalid_data.transforms = valid_data.transform
-        xvalid_data.transform = deepcopy(valid_data.transform)
+        if hasattr(xvalid_data, "transform"):
+            xvalid_data.transform = deepcopy(valid_data.transform)
+
+        # Opcional: crear SearchDataset con train y valid splits
         search_data = SearchDataset(dataset, train_data, train_split, valid_split)
-        # data loader
         search_loader = torch.utils.data.DataLoader(
             search_data,
             batch_size=batch,
@@ -344,17 +348,23 @@ def get_nas_search_loaders(
             num_workers=workers,
             pin_memory=True,
         )
+
+        # Usar Subset para train y valid
+        train_dataset = torch.utils.data.Subset(train_data, train_split)
+        valid_dataset = torch.utils.data.Subset(xvalid_data, valid_split)
+
         train_loader = torch.utils.data.DataLoader(
-            train_data,
+            train_dataset,
             batch_size=batch,
-            sampler=torch.utils.data.sampler.SubsetRandomSampler(train_split),
+            shuffle=True,  # recomendable shuffle aquí
             num_workers=workers,
             pin_memory=True,
         )
+
         valid_loader = torch.utils.data.DataLoader(
-            xvalid_data,
+            valid_dataset,
             batch_size=test_batch,
-            sampler=torch.utils.data.sampler.SubsetRandomSampler(valid_split),
+            shuffle=False,
             num_workers=workers,
             pin_memory=True,
         )
