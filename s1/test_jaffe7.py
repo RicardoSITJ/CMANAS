@@ -118,7 +118,7 @@ def main():
         batch_size=args.batch_size,
         shuffle=False,
         pin_memory=True,
-        num_workers=2,
+        num_workers=0,
     )
 
     model.drop_path_prob = 0.0

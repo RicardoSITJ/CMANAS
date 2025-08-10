@@ -162,7 +162,7 @@ def main():
         batch_size=args.batch_size,
         shuffle=True,
         pin_memory=True,
-        num_workers=2,
+        num_workers=0,
     )
 
     valid_queue = torch.utils.data.DataLoader(
@@ -170,7 +170,7 @@ def main():
         batch_size=args.batch_size,
         shuffle=False,
         pin_memory=True,
-        num_workers=2,
+        num_workers=0,
     )
 
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
