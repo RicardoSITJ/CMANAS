@@ -116,6 +116,34 @@ def _data_transforms_jaffe7(args):
     return train_transform, valid_transform
 
 
+def _data_transforms_ckplus(args):
+    CIFAR_MEAN = [x / 255 for x in [0.4369, 0.4369, 0.4369]]
+    CIFAR_STD = [x / 255 for x in [0.2356, 0.2356, 0.2356]]
+
+    train_transform = transforms.Compose(
+        [
+            transforms.Resize((32, 32)),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomRotation(15),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2),
+            transforms.RandomCrop(32, padding=4),
+            transforms.ToTensor(),
+            transforms.Normalize(CIFAR_MEAN, CIFAR_STD),
+        ]
+    )
+    if args.cutout:
+        train_transform.transforms.append(Cutout(args.cutout_length))
+
+    valid_transform = transforms.Compose(
+        [
+            transforms.Resize((32, 32)),
+            transforms.ToTensor(),
+            transforms.Normalize(CIFAR_MEAN, CIFAR_STD),
+        ]
+    )
+    return train_transform, valid_transform
+
+
 def _data_transforms_cifar100(args):
     CIFAR_MEAN = [0.5071, 0.4867, 0.4408]
     CIFAR_STD = [0.2675, 0.2565, 0.2761]

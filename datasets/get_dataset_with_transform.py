@@ -18,6 +18,7 @@ from config_utils import load_config
 
 Dataset2Class = {
     "jaffe7": 7,
+    "ckplus": 7,
     "cifar10": 10,
     "cifar100": 100,
     "imagenet-1k-s": 1000,
@@ -107,6 +108,9 @@ def get_datasets(name, root, cutout):
             else do not apply cutout regularization
     """
     if name == "jaffe7":
+        mean = [x / 255 for x in [0.4369, 0.4369, 0.4369]]
+        std = [x / 255 for x in [0.2356, 0.2356, 0.2356]]
+    elif name == "ckplus":
         mean = [x / 255 for x in [0.4369, 0.4369, 0.4369]]
         std = [x / 255 for x in [0.2356, 0.2356, 0.2356]]
     elif name == "cifar10":
@@ -220,6 +224,27 @@ def get_datasets(name, root, cutout):
             ]
         )
         xshape = (1, 3, 32, 32)
+    elif name == "ckplus":
+        lists = [
+            transforms.Resize((32, 32)),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomRotation(15),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2),
+            transforms.RandomCrop(32, padding=4),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std),
+        ]
+        if cutout > 0:
+            lists += [CUTOUT(cutout)]
+        train_transform = transforms.Compose(lists)
+        test_transform = transforms.Compose(
+            [
+                transforms.Resize((32, 32)),
+                transforms.ToTensor(),
+                transforms.Normalize(mean, std),
+            ]
+        )
+        xshape = (1, 3, 32, 32)
     else:
         raise TypeError("Unknow dataset : {:}".format(name))
 
@@ -265,6 +290,10 @@ def get_datasets(name, root, cutout):
         assert len(train_data) == 254775 and len(test_data) == 10000
     elif name == "jaffe7":
         folder_path = "/kaggle/working/CMANAS/datasets/jaffe_dataset"
+        train_data = dset.ImageFolder(osp.join(folder_path, "train"), train_transform)
+        test_data = dset.ImageFolder(osp.join(folder_path, "val"), test_transform)
+    elif name == "ckplus":
+        folder_path = "/kaggle/working/CMANAS/datasets/ckplus_split"
         train_data = dset.ImageFolder(osp.join(folder_path, "train"), train_transform)
         test_data = dset.ImageFolder(osp.join(folder_path, "val"), test_transform)
     else:
@@ -327,7 +356,7 @@ def get_nas_search_loaders(
             pin_memory=True,
         )
 
-    elif dataset == "jaffe7":
+    elif dataset in ["jaffe7", "ckplus"]:
         # Ensure reproducibility
         random.seed(42)
 
