@@ -18,6 +18,8 @@ elif [ "$dataset" == "jaffe7" ] ; then
   python ./s1/train_jaffe7.py --cutout --auxiliary --epochs ${epochs} --dir ${arch_dir} --data ${data_path} --gpu ${gpu}
 elif [ "$dataset" == "ckplus" ] ; then
   python ./s1/train_ckplus.py --cutout --auxiliary --epochs ${epochs} --dir ${arch_dir} --data ${data_path} --gpu ${gpu}
+elif [ "$dataset" == "kdef" ] ; then
+  python ./s1/train_kdef.py --cutout --auxiliary --epochs ${epochs} --dir ${arch_dir} --data ${data_path} --gpu ${gpu}
 else
   python ./s1/train_cifar100.py --cutout --auxiliary --epochs ${epochs} --dir ${arch_dir} --data ${data_path} --gpu ${gpu}
 fi
