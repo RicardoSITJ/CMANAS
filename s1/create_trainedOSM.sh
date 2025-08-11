@@ -6,17 +6,13 @@ echo $# arguments
 
 dataset=$1
 gpu=$2
-# channel=16
-channel=8
+channel=16
 num_cells=5
 max_nodes=4
 output_dir=$3
-# batch_size=96
-batch_size=32
-# valid_batch_size=1024
-valid_batch_size=64
-# layers=8
-layers=6
+batch_size=96
+valid_batch_size=1024
+layers=8
 epochs=$4
 model_name=$5
 alt_cifar100_split=$6
