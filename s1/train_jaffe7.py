@@ -96,7 +96,7 @@ logging.info(
     )
 )
 
-CIFAR_CLASSES = 7
+CIFAR_CLASSES = 3
 writer = SummaryWriter(os.path.join(args.save, "runs"))
 
 
