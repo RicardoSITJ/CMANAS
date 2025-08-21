@@ -18,7 +18,7 @@ from config_utils import load_config
 
 Dataset2Class = {
     "jaffe7": 3,
-    "ckplus": 3,
+    "ckplus": 2,
     "kdef": 3,
     "cifar10": 10,
     "cifar100": 100,

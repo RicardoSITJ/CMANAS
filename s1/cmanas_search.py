@@ -152,7 +152,7 @@ def eval_arch(data_loader, model, criterion):
 
             # record
             arch_prec1, arch_prec5 = obtain_accuracy(
-                logits.data, targets.data, topk=(1, 3)
+                logits.data, targets.data, topk=(1, 2)
             )
             arch_losses.update(arch_loss.item(), inputs.size(0))
             arch_top1.update(arch_prec1.item(), inputs.size(0))

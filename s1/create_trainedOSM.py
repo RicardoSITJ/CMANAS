@@ -171,7 +171,7 @@ def train_func(
         w_optimizer.step()
 
         # record
-        prec1, prec5 = obtain_accuracy(logits.data, targets.data, topk=(1, 3))
+        prec1, prec5 = obtain_accuracy(logits.data, targets.data, topk=(1, 2))
         losses.update(loss.item(), inputs.size(0))
         top1.update(prec1.item(), inputs.size(0))
         top5.update(prec5.item(), inputs.size(0))
