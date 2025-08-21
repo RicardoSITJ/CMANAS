@@ -66,7 +66,7 @@ for arg in sys.argv:
     tmp += " {}".format(arg)
 logging.info(f"python{tmp}")
 
-CIFAR_CLASSES = 7
+CIFAR_CLASSES = 3
 
 
 def main():
@@ -143,7 +143,7 @@ def infer(test_queue, model, criterion):
             logits, _ = model(input)
             loss = criterion(logits, target)
 
-            prec1, prec5 = ut.accuracy(logits, target, topk=(1, 5))
+            prec1, prec5 = ut.accuracy(logits, target, topk=(1, 2))
             n = input.size(0)
             objs.update(loss.data.item(), n)
             top1.update(prec1.data.item(), n)
