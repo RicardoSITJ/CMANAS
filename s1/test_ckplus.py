@@ -66,7 +66,7 @@ for arg in sys.argv:
     tmp += " {}".format(arg)
 logging.info(f"python{tmp}")
 
-CIFAR_CLASSES = 7
+CIFAR_CLASSES = 2
 
 
 def main():
