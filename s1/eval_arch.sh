@@ -16,8 +16,12 @@ if [ "$dataset" == "cifar10" ] ; then
   python ./s1/train_cifar10.py --cutout --auxiliary --epochs ${epochs} --dir ${arch_dir} --data ${data_path} --gpu ${gpu}
 elif [ "$dataset" == "jaffe7" ] ; then
   python ./s1/train_jaffe7.py --cutout --auxiliary --epochs ${epochs} --dir ${arch_dir} --data ${data_path} --gpu ${gpu}
-elif [ "$dataset" == "ckplus" ] ; then
-  python ./s1/train_ckplus.py --cutout --auxiliary --epochs ${epochs} --dir ${arch_dir} --data ${data_path} --gpu ${gpu}
+elif [ "$dataset" == "ckplus_2" ] ; then
+  python ./s1/train_ckplus_2.py --cutout --auxiliary --epochs ${epochs} --dir ${arch_dir} --data ${data_path} --gpu ${gpu}
+elif [ "$dataset" == "ckplus_3" ] ; then
+  python ./s1/train_ckplus_3.py --cutout --auxiliary --epochs ${epochs} --dir ${arch_dir} --data ${data_path} --gpu ${gpu}
+elif [ "$dataset" == "ckplus_7" ] ; then
+  python ./s1/train_ckplus_7.py --cutout --auxiliary --epochs ${epochs} --dir ${arch_dir} --data ${data_path} --gpu ${gpu}
 elif [ "$dataset" == "kdef" ] ; then
   python ./s1/train_kdef.py --cutout --auxiliary --epochs ${epochs} --dir ${arch_dir} --data ${data_path} --gpu ${gpu}
 else
