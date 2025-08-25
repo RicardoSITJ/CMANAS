@@ -14,8 +14,12 @@ elif [ "$dataset" == "cifar100" ]; then
   python ./s1/test_cifar100.py --batch_size ${batch_size} --data ${data_path} --dir ${genotype_dir} --auxiliary --model_path ${model_path} --report_freq 100 --log_path ${log_path} --gpu ${gpu}
 elif [ "$dataset" == "jaffe7" ]; then
   python ./s1/test_jaffe7.py --batch_size ${batch_size} --data ${data_path} --dir ${genotype_dir} --auxiliary --model_path ${model_path} --report_freq 100 --log_path ${log_path} --gpu ${gpu}
-elif [ "$dataset" == "ckplus" ]; then
-  python ./s1/test_ckplus.py --batch_size ${batch_size} --data ${data_path} --dir ${genotype_dir} --auxiliary --model_path ${model_path} --report_freq 100 --log_path ${log_path} --gpu ${gpu}
+elif [ "$dataset" == "ckplus_2" ]; then
+  python ./s1/test_ckplus_2.py --batch_size ${batch_size} --data ${data_path} --dir ${genotype_dir} --auxiliary --model_path ${model_path} --report_freq 100 --log_path ${log_path} --gpu ${gpu}
+elif [ "$dataset" == "ckplus_3" ]; then
+  python ./s1/test_ckplus_3.py --batch_size ${batch_size} --data ${data_path} --dir ${genotype_dir} --auxiliary --model_path ${model_path} --report_freq 100 --log_path ${log_path} --gpu ${gpu}
+elif [ "$dataset" == "ckplus_7" ]; then
+  python ./s1/test_ckplus_7.py --batch_size ${batch_size} --data ${data_path} --dir ${genotype_dir} --auxiliary --model_path ${model_path} --report_freq 100 --log_path ${log_path} --gpu ${gpu}
 elif [ "$dataset" == "kdef" ]; then
   python ./s1/test_kdef.py --batch_size ${batch_size} --data ${data_path} --dir ${genotype_dir} --auxiliary --model_path ${model_path} --report_freq 100 --log_path ${log_path} --gpu ${gpu}
 else
