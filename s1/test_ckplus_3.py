@@ -66,7 +66,7 @@ for arg in sys.argv:
     tmp += " {}".format(arg)
 logging.info(f"python{tmp}")
 
-CIFAR_CLASSES = 2
+CIFAR_CLASSES = 3
 
 
 def main():
@@ -111,7 +111,7 @@ def main():
     criterion = criterion.cuda()
 
     _, test_transform = ut._data_transforms_ckplus(args)
-    folder_path = "/kaggle/working/CMANAS/datasets/ckplus_split"
+    folder_path = "/kaggle/working/CMANAS/datasets/ckplus_split/3_class"
     test_data = dset.ImageFolder(osp.join(folder_path, "test"), test_transform)
 
     test_queue = torch.utils.data.DataLoader(
