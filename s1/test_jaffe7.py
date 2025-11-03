@@ -32,7 +32,7 @@ parser.add_argument("--gpu", type=int, default=0, help="gpu device id")
 parser.add_argument(
     "--init_channels", type=int, default=36, help="num of init channels"
 )
-parser.add_argument("--layers", type=int, default=8, help="total number of layers")
+parser.add_argument("--layers", type=int, default=20, help="total number of layers")
 parser.add_argument(
     "--model_path", type=str, default="EXP/model.pt", help="path of pretrained model"
 )
