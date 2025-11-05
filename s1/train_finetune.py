@@ -67,7 +67,8 @@ logging.basicConfig(
     format=log_format,
     datefmt="%m/%d %I:%M:%S %p",
 )
-fh = logging.FileHandler(os.path.join(args.save, "eval_log.txt"))
+# fh = logging.FileHandler(os.path.join(args.save, "eval_log.txt"))
+fh = logging.FileHandler(os.path.join("/kaggle/working/test123", "eval_log.txt"))
 fh.setFormatter(logging.Formatter(log_format))
 logging.getLogger().addHandler(fh)
 logging.info(
@@ -75,7 +76,8 @@ logging.info(
 )
 
 CIFAR_CLASSES = 7
-writer = SummaryWriter(os.path.join(args.save, "runs"))
+# writer = SummaryWriter(os.path.join(args.save, "runs"))
+writer = SummaryWriter(os.path.join("/kaggle/working/test123", "runs"))
 
 
 def main():
@@ -100,8 +102,8 @@ def main():
         return
     with open(genotype_path, "rb") as f:
         genotype = pickle.load(f)
-    visualize.plot(genotype.normal, os.path.join(args.save, "normal"), False)
-    visualize.plot(genotype.reduce, os.path.join(args.save, "reduction"), False)
+    # visualize.plot(genotype.normal, os.path.join(args.save, "normal"), False)
+    # visualize.plot(genotype.reduce, os.path.join(args.save, "reduction"), False)
     logging.info(genotype)
 
     # Model setup
@@ -201,7 +203,8 @@ def main():
     )
     print(f"best_acc: {best_acc_top1.item():.4f}, valid_acc: {valid_acc.item():.4f}")
 
-    with open(os.path.join(args.save, "test_error.pickle"), "wb") as f:
+    # with open(os.path.join(args.save, "test_error.pickle"), "wb") as f:
+    with open(os.path.join("/kaggle/working/test123", "test_error.pickle"), "wb") as f:
         pickle.dump(test_error, f)
 
 
