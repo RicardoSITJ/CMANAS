@@ -167,8 +167,11 @@ def main():
 
         epoch_start = time.time()
         train_acc, train_obj = train(train_queue, model, criterion, optimizer)
+        # logging.info(
+        #     f"[INFO] train_acc {train_acc:.4f} finished in {(time.time() - epoch_start) / 60:.2f} minutes"
+        # )
         logging.info(
-            f"[INFO] train_acc {train_acc:.4f} finished in {(time.time() - epoch_start) / 60:.2f} minutes"
+            f"[INFO] train_acc {train_acc.item():.4f} finished in {(time.time() - epoch_start) / 60:.2f} minutes"
         )
 
         writer.add_scalar("train_acc", train_acc, epoch + 1)
