@@ -112,7 +112,7 @@ def main():
 
     _, test_transform = ut._data_transforms_ckplus(args)
     # folder_path = "/kaggle/working/CMANAS/datasets/loso/excluded_KA"
-    folder_path = "/kaggle/working/CMANAS/datasets//loio/excluded_KA"
+    folder_path = "/kaggle/working/CMANAS/datasets/loio/excluded_KA"
     test_data = dset.ImageFolder(osp.join(folder_path, "test"), test_transform)
 
     test_queue = torch.utils.data.DataLoader(
