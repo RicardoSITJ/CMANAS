@@ -179,7 +179,8 @@ def main():
         scheduler.step()
 
         valid_acc, valid_obj = infer(valid_queue, model, criterion)
-        logging.info(f"[INFO] valid_acc {valid_acc:.4f}")
+        # logging.info(f"[INFO] valid_acc {valid_acc:.4f}")
+        logging.info(f"[INFO] valid_acc {valid_acc.item():.4f}")
         writer.add_scalar("valid_acc", valid_acc, epoch + 1)
         writer.add_scalar("valid_obj", valid_obj, epoch + 1)
         writer.add_scalar("test_error", 100 - valid_acc, epoch + 1)
