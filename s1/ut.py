@@ -122,13 +122,11 @@ def _data_transforms_ckplus(args):
 
     train_transform = transforms.Compose(
         [
-            # transforms.Resize((32, 32)),
-            transforms.Resize((128, 128)),
+            transforms.Resize((32, 32)),
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomRotation(15),
             transforms.ColorJitter(brightness=0.2, contrast=0.2),
-            # transforms.RandomCrop(32, padding=4),
-            transforms.RandomCrop(128, padding=4),
+            transforms.RandomCrop(32, padding=4),
             transforms.ToTensor(),
             transforms.Normalize(CIFAR_MEAN, CIFAR_STD),
         ]
@@ -138,8 +136,7 @@ def _data_transforms_ckplus(args):
 
     valid_transform = transforms.Compose(
         [
-            # transforms.Resize((32, 32)),
-            transforms.Resize((128, 128)),
+            transforms.Resize((32, 32)),
             transforms.ToTensor(),
             transforms.Normalize(CIFAR_MEAN, CIFAR_STD),
         ]
