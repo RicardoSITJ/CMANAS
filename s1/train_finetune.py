@@ -193,7 +193,10 @@ def main():
             # ut.save(model, os.path.join(args.save, "best_weights.pt"))
             ut.save(model, os.path.join("/kaggle/working/test123", "best_weights.pt"))
             best_acc_top1 = valid_acc
-            logging.info(f"[INFO] New best model saved with acc {best_acc_top1:.4f}")
+            # logging.info(f"[INFO] New best model saved with acc {best_acc_top1:.4f}")
+            logging.info(
+                f"[INFO] New best model saved with acc {best_acc_top1.item():.4f}"
+            )
 
         writer.add_scalar("best_acc", best_acc_top1, epoch + 1)
         writer.add_scalar("best_test_error", 100 - best_acc_top1, epoch + 1)
