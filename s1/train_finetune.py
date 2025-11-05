@@ -56,7 +56,8 @@ if args.seed is None or args.seed < 0:
 args.save = f"eval-{args.save}-1"
 if args.dir is not None:
     args.save = os.path.join(args.dir, args.save)
-ut.create_exp_dir(args.save)
+# ut.create_exp_dir(args.save)
+ut.create_exp_dir("/kaggle/working/test123")
 
 # Logging setup
 log_format = "%(asctime)s %(message)s"
@@ -178,11 +179,13 @@ def main():
         writer.add_scalar("valid_obj", valid_obj, epoch + 1)
         writer.add_scalar("test_error", 100 - valid_acc, epoch + 1)
 
-        ut.save(model, os.path.join(args.save, "weights.pt"))
+        # ut.save(model, os.path.join(args.save, "weights.pt"))
+        ut.save(model, os.path.join("/kaggle/working/test123", "weights.pt"))
         test_error.append(100 - valid_acc)
 
         if valid_acc > best_acc_top1:
-            ut.save(model, os.path.join(args.save, "best_weights.pt"))
+            # ut.save(model, os.path.join(args.save, "best_weights.pt"))
+            ut.save(model, os.path.join("/kaggle/working/test123", "best_weights.pt"))
             best_acc_top1 = valid_acc
             logging.info(f"[INFO] New best model saved with acc {best_acc_top1:.4f}")
 
