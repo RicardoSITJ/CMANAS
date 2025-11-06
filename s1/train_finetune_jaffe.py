@@ -25,6 +25,7 @@ from torch.utils.tensorboard import SummaryWriter
 parser = argparse.ArgumentParser("cifar10")
 parser.add_argument("--data", type=str, default="../data")
 parser.add_argument("--dir", type=str, default=None, help="location of population")
+parser.add_argument("--genotype_dir", type=str, default=None, help="path of genotype")
 parser.add_argument("--batch_size", type=int, default=96)
 parser.add_argument("--learning_rate", type=float, default=0.025)
 parser.add_argument("--momentum", type=float, default=0.9)
@@ -94,7 +95,7 @@ def main():
     logging.info(f"args = {args}")
 
     # Load genotype
-    genotype_path = os.path.join(args.dir, "genotype.pickle")
+    genotype_path = os.path.join(args.genotype_dir, "genotype.pickle")
     if not os.path.exists(genotype_path):
         logging.error(f"No genotype found at {genotype_path}")
         return
@@ -124,6 +125,7 @@ def main():
     best_model_path = os.path.join(args.dir, "best_weights.pt")
     if args.finetune and os.path.exists(best_model_path):
         logging.info(f"[INFO] Loading fine-tuned weights from {best_model_path}")
+        print(f"[INFO] Loading fine-tuned weights from {best_model_path}")
         ut.load(model, best_model_path)
     else:
         logging.warning(
