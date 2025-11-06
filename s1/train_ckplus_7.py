@@ -261,10 +261,7 @@ def train(train_queue, model, criterion, optimizer):
         top5.update(prec5.data, n)
 
         if step % args.report_freq == 0:
-            # logging.info("train %03d %e %f %f", step, objs.avg, top1.avg, top5.avg)
-            logging.info(
-                f"train {step:03d} {objs.avg:.5e} {top1.avg:.4f} {top5.avg:.4f}"
-            )
+            logging.info("train %03d %e %f %f", step, objs.avg, top1.avg, top5.avg)
 
     return top1.avg, objs.avg
 
@@ -290,10 +287,7 @@ def infer(valid_queue, model, criterion):
             top5.update(prec5.data, n)
 
             if step % args.report_freq == 0:
-                # logging.info("valid %03d %e %f %f", step, objs.avg, top1.avg, top5.avg)
-                logging.info(
-                    f"valid {step:03d} {objs.avg:.5e} {top1.avg:.4f} {top5.avg:.4f}"
-                )
+                logging.info("valid %03d %e %f %f", step, objs.avg, top1.avg, top5.avg)
 
     return top1.avg, objs.avg
 
