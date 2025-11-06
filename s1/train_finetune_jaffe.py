@@ -13,6 +13,7 @@ import torch.backends.cudnn as cudnn
 import torchvision.datasets as dset
 import torchvision
 from codecarbon import EmissionsTracker
+import gc
 
 sys.path.insert(0, "./")
 import ut
@@ -278,9 +279,15 @@ def infer(valid_queue, model, criterion):
 
 
 if __name__ == "__main__":
+    gc.collect()
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()
     start_time = time.time()
     main()
     logging.info(
         f"[INFO] Training/Fine-tuning finished in {(time.time() - start_time) / 3600:.2f} hours"
     )
     writer.close()
+    gc.collect()
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()
