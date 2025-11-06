@@ -12,6 +12,7 @@ import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import torchvision.datasets as dset
 import torchvision
+from codecarbon import EmissionsTracker
 
 sys.path.insert(0, "./")
 import ut
@@ -157,6 +158,12 @@ def main():
     # ============================
     #  TRAIN / FINE-TUNE
     # ============================
+    tracker = EmissionsTracker(
+        project_name="train_finetune_jaffe",
+        output_dir="carbon_logs",
+        output_file="train_finetune_jaffe.csv",
+    )
+    tracker.start()
     for epoch in range(args.epochs):
         logging.info(
             f"[INFO] epoch ({epoch + 1}/{args.epochs}) lr {scheduler.get_last_lr()[0]:e}"
@@ -201,6 +208,8 @@ def main():
         )
         logging.info("=" * 100)
 
+    emissions = tracker.stop()
+    logging.info(f"[INFO] Estimated emissions (kg CO₂): {emissions:.5f}")
     logging.info(
         f"best_acc: {best_acc_top1.item():.4f}, valid_acc: {valid_acc.item():.4f}"
     )

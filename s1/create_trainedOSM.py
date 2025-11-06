@@ -20,6 +20,7 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 import utils
+from codecarbon import EmissionsTracker
 
 from config_utils import load_config, dict2config
 from datasets import get_datasets, get_nas_search_loaders
@@ -305,6 +306,12 @@ def main(args):
     logging.info(f"Scheduler: {scheduler}")
 
     total_epochs = args.epochs + args.warm_up
+    tracker = EmissionsTracker(
+        project_name="create_trainedOSM",
+        output_dir="carbon_logs",
+        output_file="create_trainedOSM.csv",
+    )
+    tracker.start()
     epoch_start = time.time()
     for epoch in range(total_epochs):
         logging.info("=" * 100)
@@ -337,6 +344,8 @@ def main(args):
         logging.info(
             f"[INFO] Epoch finished in {(time.time()-train_start) / 60:.5f} minutes"
         )
+    emissions = tracker.stop()
+    logging.info(f"[INFO] Estimated emissions (kg CO₂): {emissions:.5f}")
     logging.info(
         f"[INFO] Training finished in {(time.time()-epoch_start) / 3600:.5f} hours"
     )

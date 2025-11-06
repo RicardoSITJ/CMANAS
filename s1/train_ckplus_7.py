@@ -19,6 +19,7 @@ import torch.utils
 import torchvision.datasets as dset
 import torch.backends.cudnn as cudnn
 import torchvision
+from codecarbon import EmissionsTracker
 
 from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
@@ -181,6 +182,12 @@ def main():
     test_error = []
     best_acc_top1 = 0.0
 
+    tracker = EmissionsTracker(
+        project_name="train_ckplus_7",
+        output_dir="carbon_logs",
+        output_file="train_ckplus_7.csv",
+    )
+    tracker.start()
     for epoch in range(args.epochs):
         logging.info(
             "[INFO] epoch (%d/%d) lr %e",
@@ -218,6 +225,8 @@ def main():
         logging.info(f"[INFO] Epoch finished in {(time.time() - epoch_start) / 60}")
         logging.info("=" * 100)
 
+    emissions = tracker.stop()
+    logging.info(f"[INFO] Estimated emissions (kg CO₂): {emissions:.5f}")
     logging.info(f"best_acc: {best_acc_top1.item()}, valid_acc: {valid_acc.item()}")
     print(f"best_acc: {best_acc_top1.item()}, valid_acc: {valid_acc.item()}")
 

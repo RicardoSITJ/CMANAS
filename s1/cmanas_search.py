@@ -21,6 +21,7 @@ import torchvision
 import torchvision.transforms as transforms
 import utils
 import visualize
+from codecarbon import EmissionsTracker
 
 from cma_es import CMAES
 from config_utils import load_config, dict2config
@@ -403,6 +404,12 @@ def main(args):
     )
 
     total_epochs = args.epochs
+    tracker = EmissionsTracker(
+        project_name="cmanas_search",
+        output_dir="carbon_logs",
+        output_file="cmanas_search.csv",
+    )
+    tracker.start()
     epoch_start = time.time()
     for epoch in range(total_epochs + 1):
         train_start = time.time()
@@ -501,6 +508,8 @@ def main(args):
             f"[INFO] Epoch finished in {(time.time()-train_start) / 60:.5f} minutes"
         )
 
+    emissions = tracker.stop()
+    logging.info(f"[INFO] Estimated emissions (kg CO₂): {emissions:.5f}")
     logging.info(
         f"length of genotype_list: {len(genotype_list)}, mean_list: {len(mean_list)}, cov_list: {len(cov_list)}"
     )
