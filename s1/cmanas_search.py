@@ -22,6 +22,7 @@ import torchvision.transforms as transforms
 import utils
 import visualize
 from codecarbon import EmissionsTracker
+import gc
 
 from cma_es import CMAES
 from config_utils import load_config, dict2config
@@ -537,4 +538,10 @@ def main(args):
 
 
 if __name__ == "__main__":
+    gc.collect()
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()
     main(args)
+    gc.collect()
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()

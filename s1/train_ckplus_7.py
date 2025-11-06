@@ -20,6 +20,7 @@ import torchvision.datasets as dset
 import torch.backends.cudnn as cudnn
 import torchvision
 from codecarbon import EmissionsTracker
+import gc
 
 from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
@@ -293,9 +294,15 @@ def infer(valid_queue, model, criterion):
 
 
 if __name__ == "__main__":
+    gc.collect()
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()
     start_time = time.time()
     main()
     logging.info(
         "[INFO] Training finished in {} hours".format((time.time() - start_time) / 3600)
     )
     writer.close()
+    gc.collect()
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()

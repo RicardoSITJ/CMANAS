@@ -21,6 +21,7 @@ import torchvision
 import torchvision.transforms as transforms
 import utils
 from codecarbon import EmissionsTracker
+import gc
 
 from config_utils import load_config, dict2config
 from datasets import get_datasets, get_nas_search_loaders
@@ -353,4 +354,10 @@ def main(args):
 
 
 if __name__ == "__main__":
+    gc.collect()
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()
     main(args)
+    gc.collect()
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()
