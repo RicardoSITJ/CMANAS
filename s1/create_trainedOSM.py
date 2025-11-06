@@ -306,6 +306,7 @@ def main(args):
     logging.info(f"Scheduler: {scheduler}")
 
     total_epochs = args.epochs + args.warm_up
+    os.makedirs("carbon_logs", exist_ok=True)
     tracker = EmissionsTracker(
         project_name="create_trainedOSM",
         output_dir="carbon_logs",
