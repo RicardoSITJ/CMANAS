@@ -151,7 +151,10 @@ def infer(test_queue, model, criterion):
             top5.update(prec5.data.item(), n)
 
             if step % args.report_freq == 0:
-                logging.info("test %03d %e %f %f", step, objs.avg, top1.avg, top5.avg)
+                # logging.info("test %03d %e %f %f", step, objs.avg, top1.avg, top5.avg)
+                logging.info(
+                    f"test {step:03d} {objs.avg:.5e} {top1.avg:.4f} {top5.avg:.4f}"
+                )
 
     return top1.avg, objs.avg
 
