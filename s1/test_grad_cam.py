@@ -71,69 +71,6 @@ class GradCAM:
         return cam.detach().cpu().numpy()
 
 
-class GradCAMPlusPlus:
-    def __init__(self, model, target_layer_name):
-        self.model = model
-        self.model.eval()
-
-        self.target_layer = dict(self.model.named_modules())[target_layer_name]
-        self.gradients = None
-        self.activations = None
-
-        # hooks
-        self.target_layer.register_forward_hook(self.save_activation)
-        self.target_layer.register_backward_hook(self.save_gradient)
-
-    def save_activation(self, module, input, output):
-        self.activations = output
-
-    def save_gradient(self, module, grad_input, grad_output):
-        self.gradients = grad_output[0]
-
-    def generate(self, input_tensor, target_class=None):
-        # forward
-        output = self.model(input_tensor)
-
-        # ✅ handle models that return (logits, aux)
-        if isinstance(output, tuple):
-            output = output[0]
-
-        if target_class is None:
-            target_class = output.argmax(dim=1)
-
-        loss = output[:, target_class]
-        self.model.zero_grad()
-        loss.backward(retain_graph=True)
-
-        gradients = self.gradients
-        activations = self.activations
-
-        # ---- Grad-CAM++ weights computation ----
-        grads_power_2 = gradients**2
-        grads_power_3 = gradients**3
-
-        sum_activations = torch.sum(activations, dim=(2, 3), keepdim=True)
-
-        eps = 1e-8
-        alpha_num = grads_power_2
-        alpha_den = 2 * grads_power_2 + sum_activations * grads_power_3
-        alpha = alpha_num / (alpha_den + eps)
-
-        weights = torch.sum(
-            alpha * F.relu(gradients), dim=(2, 3)
-        )  # per-channel weights
-
-        # weighted sum
-        cam = torch.sum(weights[..., None, None] * activations, dim=1)
-        cam = F.relu(cam)
-
-        # normalize 0–1
-        cam -= cam.min()
-        cam /= cam.max() + eps
-
-        return cam  # (B,H,W)
-
-
 # --------------- SAVE GRAD-CAM HEATMAP ----------------
 def save_gradcam(img_tensor, cam_map, step, pred, gt):
     img = img_tensor.squeeze().detach().cpu().numpy()
