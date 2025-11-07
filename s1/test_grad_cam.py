@@ -94,6 +94,10 @@ class GradCAMPlusPlus:
         # forward
         output = self.model(input_tensor)
 
+        # ✅ handle models that return (logits, aux)
+        if isinstance(output, tuple):
+            output = output[0]
+
         if target_class is None:
             target_class = output.argmax(dim=1)
 
