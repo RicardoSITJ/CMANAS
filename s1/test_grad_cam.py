@@ -71,19 +71,48 @@ class GradCAM:
         return cam.detach().cpu().numpy()
 
 
+# # --------------- SAVE GRAD-CAM HEATMAP ----------------
+# def save_gradcam(img_tensor, cam_map, step, pred, gt):
+#     img = img_tensor.squeeze().detach().cpu().numpy()
+#     img = np.transpose(img, (1, 2, 0))
+#     img = (img - img.min()) / (img.max() - img.min())
+
+#     cam = cv2.applyColorMap((cam_map * 255).astype(np.uint8), cv2.COLORMAP_JET)
+#     cam = cv2.cvtColor(cam, cv2.COLOR_BGR2RGB)
+#     cam = 0.3 * cam / 255.0 + 0.7 * img
+
+#     plt.figure(figsize=(3, 3))
+#     plt.imshow(cam)
+#     plt.title(f"Pred: {pred} | GT: {gt}")  # ✅ SHOW PRED & GT
+#     plt.axis("off")
+
+#     out_dir = "gradcam_outputs"
+#     os.makedirs(out_dir, exist_ok=True)
+#     out_path = f"{out_dir}/gradcam_step_{step}.png"
+#     plt.savefig(out_path, bbox_inches="tight", pad_inches=0)
+#     plt.close()
+#     print(f"[GradCAM] Saved: {out_path} (Pred={pred}, GT={gt})")
+
+
 # --------------- SAVE GRAD-CAM HEATMAP ----------------
 def save_gradcam(img_tensor, cam_map, step, pred, gt):
     img = img_tensor.squeeze().detach().cpu().numpy()
     img = np.transpose(img, (1, 2, 0))
     img = (img - img.min()) / (img.max() - img.min())
 
+    # ✅ Intensificar colores del heatmap
+    cam_map = cam_map**2.0  # Aumenta intensidad
+    cam_map = (cam_map - cam_map.min()) / (cam_map.max() - cam_map.min())
+
     cam = cv2.applyColorMap((cam_map * 255).astype(np.uint8), cv2.COLORMAP_JET)
     cam = cv2.cvtColor(cam, cv2.COLOR_BGR2RGB)
-    cam = 0.3 * cam / 255.0 + 0.7 * img
+
+    # ✅ Mezcla más fuerte: más heatmap, menos imagen original
+    cam = 0.6 * cam / 255.0 + 0.4 * img  # 0.6 puede subir hasta 0.8
 
     plt.figure(figsize=(3, 3))
     plt.imshow(cam)
-    plt.title(f"Pred: {pred} | GT: {gt}")  # ✅ SHOW PRED & GT
+    plt.title(f"Pred: {pred} | GT: {gt}")
     plt.axis("off")
 
     out_dir = "gradcam_outputs"
