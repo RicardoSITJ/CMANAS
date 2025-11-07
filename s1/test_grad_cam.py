@@ -349,8 +349,8 @@ def infer(test_queue, model, criterion):
             print(
                 f"[IMG global={img_counter} | batch={step} idx={i}] Pred={pred} | GT={gt}"
             )
-            # save_gradcam(img, cam_map, f"{step}_{i}", pred, gt)
-            save_gradcam_visuals(img, cam_map, f"{step}_{i}", pred, gt)
+            save_gradcam(img, cam_map, f"{step}_{i}", pred, gt)
+            # save_gradcam_visuals(img, cam_map, f"{step}_{i}", pred, gt)
 
             img_counter += 1
 
