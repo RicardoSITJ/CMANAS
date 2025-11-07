@@ -317,8 +317,8 @@ def infer(test_queue, model, criterion):
     # ✅ attach GradCAM to last cell
     target_layer = f"cells.{args.layers - 1}"
     print(f"[GradCAM] Using layer: {target_layer}")
-    # gradcam = GradCAM(model, target_layer)
-    gradcam = GradCAMPlusPlus(model, target_layer)
+    gradcam = GradCAM(model, target_layer)
+    # gradcam = GradCAMPlusPlus(model, target_layer)
 
     img_counter = 0  # for unique naming
 
