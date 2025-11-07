@@ -212,6 +212,8 @@ def infer(test_queue, model, criterion):
     print(f"[GradCAM] Using layer: {target_layer}")
     gradcam = GradCAM(model, target_layer)
 
+    img_counter = 0  # for unique naming
+
     for step, (input, target) in enumerate(test_queue):
 
         input = input.cuda()
@@ -226,16 +228,22 @@ def infer(test_queue, model, criterion):
         top1.update(prec1.item(), n)
         top5.update(prec5.item(), n)
 
-        # ✅ Grad-CAM for first image of batch
-        img = input[0].unsqueeze(0)
+        # ✅ Grad-CAM for EVERY IMAGE in the batch
+        batch_size = input.size(0)
+        for i in range(batch_size):
+            img = input[i].unsqueeze(0)
 
-        pred = torch.argmax(logits[0]).item()  # prediction
-        gt = target[0].item()  # ground truth
+            pred = torch.argmax(logits[i]).item()
+            gt = target[i].item()
 
-        cam_map = gradcam.generate(img, pred)[0, 0]
+            cam_map = gradcam.generate(img, pred)[0, 0]
 
-        print(f"[IMG {step}] Predicted={pred} | GroundTruth={gt}")
-        save_gradcam(img, cam_map, step, pred, gt)
+            print(
+                f"[IMG global={img_counter} | batch={step} idx={i}] Pred={pred} | GT={gt}"
+            )
+            save_gradcam(img, cam_map, f"{step}_{i}", pred, gt)
+
+            img_counter += 1
 
         if step % args.report_freq == 0:
             logging.info("test %03d %e %f %f", step, objs.avg, top1.avg, top5.avg)
