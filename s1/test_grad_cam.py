@@ -72,7 +72,7 @@ class GradCAM:
 
 
 # --------------- SAVE GRAD-CAM HEATMAP ----------------
-def save_gradcam(img_tensor, cam_map, step):
+def save_gradcam(img_tensor, cam_map, step, pred, gt):
     img = img_tensor.squeeze().detach().cpu().numpy()
     img = np.transpose(img, (1, 2, 0))
     img = (img - img.min()) / (img.max() - img.min())
@@ -83,11 +83,13 @@ def save_gradcam(img_tensor, cam_map, step):
 
     plt.figure(figsize=(3, 3))
     plt.imshow(cam)
+    plt.title(f"Pred: {pred} | GT: {gt}")  # ✅ SHOW PRED & GT
     plt.axis("off")
+
     out_path = f"gradcam_step_{step}.png"
     plt.savefig(out_path, bbox_inches="tight", pad_inches=0)
     plt.close()
-    print(f"[GradCAM] Saved: {out_path}")
+    print(f"[GradCAM] Saved: {out_path} (Pred={pred}, GT={gt})")
 
 
 # ----------------------- ORIGINAL SCRIPT -----------------------
@@ -226,9 +228,14 @@ def infer(test_queue, model, criterion):
 
         # ✅ Grad-CAM for first image of batch
         img = input[0].unsqueeze(0)
-        class_idx = torch.argmax(logits[0]).item()
-        cam_map = gradcam.generate(img, class_idx)[0, 0]
-        save_gradcam(img, cam_map, step)
+
+        pred = torch.argmax(logits[0]).item()  # prediction
+        gt = target[0].item()  # ground truth
+
+        cam_map = gradcam.generate(img, pred)[0, 0]
+
+        print(f"[IMG {step}] Predicted={pred} | GroundTruth={gt}")
+        save_gradcam(img, cam_map, step, pred, gt)
 
         if step % args.report_freq == 0:
             logging.info("test %03d %e %f %f", step, objs.avg, top1.avg, top5.avg)
