@@ -149,54 +149,12 @@ def save_gradcam(img_tensor, cam_map, step, pred, gt):
     plt.title(f"Pred: {pred} | GT: {gt}")  # ✅ SHOW PRED & GT
     plt.axis("off")
 
-    out_path = f"gradcam_step_{step}.png"
+    out_dir = "gradcam_outputs"
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = f"{out_dir}/gradcam_step_{step}.png"
     plt.savefig(out_path, bbox_inches="tight", pad_inches=0)
     plt.close()
     print(f"[GradCAM] Saved: {out_path} (Pred={pred}, GT={gt})")
-
-
-def save_gradcam_visuals(img_tensor, cam_map, step, pred, gt):
-    """
-    Saves 3 images:
-      1) original image
-      2) heatmap only
-      3) blended heatmap + original
-    """
-
-    # ----- Convert input tensor to numpy image -----
-    img = img_tensor.detach().cpu().numpy()[0]  # (C,H,W)
-    img = np.transpose(img, (1, 2, 0))  # (H,W,C)
-
-    # denormalize (ImageNet)
-    img = img * np.array([0.229, 0.224, 0.225]) + np.array([0.485, 0.456, 0.406])
-    img = np.clip(img, 0, 1)
-
-    # ----- Resize CAM to image size -----
-    cam = cam_map.detach().cpu().numpy()
-    cam = cv2.resize(cam, (img.shape[1], img.shape[0]))
-
-    # Normalize 0-255
-    heatmap = (cam - cam.min()) / (cam.max() - cam.min())
-    heatmap = np.uint8(255 * heatmap)
-
-    # Apply colormap (sharp colors)
-    heatmap_color = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
-    heatmap_color = cv2.cvtColor(heatmap_color, cv2.COLOR_BGR2RGB)
-
-    # Blend heatmap with original
-    blended = (heatmap_color * 0.4 + img * 255 * 0.6).astype(np.uint8)
-
-    # Save all 3
-    out_dir = "gradcam_outputs"
-    os.makedirs(out_dir, exist_ok=True)
-
-    cv2.imwrite(
-        f"{out_dir}/img_{step}_orig_pred{pred}_gt{gt}.png", (img * 255).astype(np.uint8)
-    )
-    cv2.imwrite(f"{out_dir}/img_{step}_heat_pred{pred}_gt{gt}.png", heatmap_color)
-    cv2.imwrite(f"{out_dir}/img_{step}_blend_pred{pred}_gt{gt}.png", blended)
-
-    print(f"[Saved] step={step}  pred={pred}  gt={gt}")
 
 
 # ----------------------- ORIGINAL SCRIPT -----------------------
@@ -317,8 +275,8 @@ def infer(test_queue, model, criterion):
     # ✅ attach GradCAM to last cell
     target_layer = f"cells.{args.layers - 1}"
     print(f"[GradCAM] Using layer: {target_layer}")
-    gradcam = GradCAM(model, target_layer)
-    # gradcam = GradCAMPlusPlus(model, target_layer)
+    # gradcam = GradCAM(model, target_layer)
+    gradcam = GradCAMPlusPlus(model, target_layer)
 
     img_counter = 0  # for unique naming
 
@@ -350,7 +308,6 @@ def infer(test_queue, model, criterion):
                 f"[IMG global={img_counter} | batch={step} idx={i}] Pred={pred} | GT={gt}"
             )
             save_gradcam(img, cam_map, f"{step}_{i}", pred, gt)
-            # save_gradcam_visuals(img, cam_map, f"{step}_{i}", pred, gt)
 
             img_counter += 1
 
