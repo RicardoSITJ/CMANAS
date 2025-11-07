@@ -288,6 +288,18 @@ if __name__ == "__main__":
         f"[INFO] Training/Fine-tuning finished in {(time.time() - start_time) / 3600:.2f} hours"
     )
     writer.close()
+    # Delete model and data loaders if they exist
+    variables_to_delete = [
+        "model",
+        "train_queue",
+        "valid_queue",
+        "optimizer",
+        "criterion",
+    ]
+    gl = globals()
+    for var in variables_to_delete:
+        if var in gl:
+            del gl[var]
     gc.collect()
     torch.cuda.empty_cache()
     torch.cuda.synchronize()

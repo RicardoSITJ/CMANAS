@@ -542,6 +542,18 @@ if __name__ == "__main__":
     torch.cuda.empty_cache()
     torch.cuda.synchronize()
     main(args)
+    # Delete model and data loaders if they exist
+    variables_to_delete = [
+        "model",
+        "train_queue",
+        "valid_queue",
+        "optimizer",
+        "criterion",
+    ]
+    gl = globals()
+    for var in variables_to_delete:
+        if var in gl:
+            del gl[var]
     gc.collect()
     torch.cuda.empty_cache()
     torch.cuda.synchronize()
