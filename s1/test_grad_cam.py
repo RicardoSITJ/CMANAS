@@ -231,6 +231,57 @@ def main():
     print(f"test_acc {test_acc}")
 
 
+# def infer(test_queue, model, criterion):
+#     objs = ut.AvgrageMeter()
+#     top1 = ut.AvgrageMeter()
+#     top5 = ut.AvgrageMeter()
+
+#     model.eval()
+
+#     # ✅ attach GradCAM to last cell
+#     target_layer = f"cells.{args.layers - 1}"
+#     print(f"[GradCAM] Using layer: {target_layer}")
+#     gradcam = GradCAM(model, target_layer)
+
+#     img_counter = 0  # for unique naming
+
+#     for step, (input, target) in enumerate(test_queue):
+
+#         input = input.cuda()
+#         target = target.cuda()
+
+#         logits, _ = model(input)
+#         loss = criterion(logits, target)
+
+#         prec1, prec5 = ut.accuracy(logits, target, topk=(1, 2))
+#         n = input.size(0)
+#         objs.update(loss.item(), n)
+#         top1.update(prec1.item(), n)
+#         top5.update(prec5.item(), n)
+
+#         # ✅ Grad-CAM for EVERY IMAGE in the batch
+#         batch_size = input.size(0)
+#         for i in range(batch_size):
+#             img = input[i].unsqueeze(0)
+
+#             pred = torch.argmax(logits[i]).item()
+#             gt = target[i].item()
+
+#             cam_map = gradcam.generate(img, pred)[0, 0]
+
+#             print(
+#                 f"[IMG global={img_counter} | batch={step} idx={i}] Pred={pred} | GT={gt}"
+#             )
+#             save_gradcam(img, cam_map, f"{step}_{i}", pred, gt)
+
+#             img_counter += 1
+
+#         if step % args.report_freq == 0:
+#             logging.info("test %03d %e %f %f", step, objs.avg, top1.avg, top5.avg)
+
+#     return top1.avg, objs.avg
+
+
 def infer(test_queue, model, criterion):
     objs = ut.AvgrageMeter()
     top1 = ut.AvgrageMeter()
@@ -238,15 +289,17 @@ def infer(test_queue, model, criterion):
 
     model.eval()
 
-    # ✅ attach GradCAM to last cell
     target_layer = f"cells.{args.layers - 1}"
     print(f"[GradCAM] Using layer: {target_layer}")
     gradcam = GradCAM(model, target_layer)
 
-    img_counter = 0  # for unique naming
+    img_counter = 0
+
+    # ✅ Store predictions + GT
+    all_preds = []
+    all_targets = []
 
     for step, (input, target) in enumerate(test_queue):
-
         input = input.cuda()
         target = target.cuda()
 
@@ -255,30 +308,42 @@ def infer(test_queue, model, criterion):
 
         prec1, prec5 = ut.accuracy(logits, target, topk=(1, 2))
         n = input.size(0)
+
         objs.update(loss.item(), n)
         top1.update(prec1.item(), n)
         top5.update(prec5.item(), n)
 
-        # ✅ Grad-CAM for EVERY IMAGE in the batch
+        # ✅ Save predictions for metrics
+        batch_preds = torch.argmax(logits, dim=1).cpu().numpy()
+        batch_targets = target.cpu().numpy()
+
+        all_preds.extend(batch_preds.tolist())
+        all_targets.extend(batch_targets.tolist())
+
+        # ✅ Grad-CAM per image
         batch_size = input.size(0)
         for i in range(batch_size):
             img = input[i].unsqueeze(0)
 
-            pred = torch.argmax(logits[i]).item()
-            gt = target[i].item()
+            pred = int(batch_preds[i])
+            gt = int(batch_targets[i])
 
             cam_map = gradcam.generate(img, pred)[0, 0]
-
             print(
                 f"[IMG global={img_counter} | batch={step} idx={i}] Pred={pred} | GT={gt}"
             )
             save_gradcam(img, cam_map, f"{step}_{i}", pred, gt)
-
             img_counter += 1
 
         if step % args.report_freq == 0:
             logging.info("test %03d %e %f %f", step, objs.avg, top1.avg, top5.avg)
 
+    # ✅ Save predictions/GT to file
+    results = {"preds": all_preds, "targets": all_targets}
+    with open("predictions_gt.pkl", "wb") as f:
+        pickle.dump(results, f)
+
+    print("[INFO] Saved predictions & ground-truth → predictions_gt.pkl")
     return top1.avg, objs.avg
 
 
