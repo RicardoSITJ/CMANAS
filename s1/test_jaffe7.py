@@ -26,6 +26,7 @@ parser.add_argument(
     "--data", type=str, default="../data", help="location of the data corpus"
 )
 parser.add_argument("--dir", type=str, default=None, help="location of population")
+parser.add_argument("--data_dir", type=str, default=None, help="path of data")
 parser.add_argument("--batch_size", type=int, default=1024, help="batch size")
 parser.add_argument("--report_freq", type=float, default=50, help="report frequency")
 parser.add_argument("--gpu", type=int, default=0, help="gpu device id")
@@ -111,8 +112,7 @@ def main():
     criterion = criterion.cuda()
 
     _, test_transform = ut._data_transforms_ckplus(args)
-    # folder_path = "/kaggle/working/CMANAS/datasets/loso/excluded_KA"
-    folder_path = "/kaggle/working/CMANAS/datasets/loio/excluded_KA"
+    folder_path = args.data_dir
     test_data = dset.ImageFolder(osp.join(folder_path, "test"), test_transform)
 
     test_queue = torch.utils.data.DataLoader(

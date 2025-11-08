@@ -27,6 +27,7 @@ parser = argparse.ArgumentParser("cifar10")
 parser.add_argument("--data", type=str, default="../data")
 parser.add_argument("--dir", type=str, default=None, help="location of population")
 parser.add_argument("--genotype_dir", type=str, default=None, help="path of genotype")
+parser.add_argument("--data_dir", type=str, default=None, help="path of data")
 parser.add_argument("--batch_size", type=int, default=96)
 parser.add_argument("--learning_rate", type=float, default=0.025)
 parser.add_argument("--momentum", type=float, default=0.9)
@@ -135,9 +136,7 @@ def main():
 
     # Dataset
     train_transform, valid_transform = ut._data_transforms_ckplus(args)
-    # folder_path = "/kaggle/working/CMANAS/datasets/ckplus_split/7_class"
-    # folder_path = "/kaggle/working/CMANAS/datasets/loso/excluded_KA"
-    folder_path = "/kaggle/working/CMANAS/datasets/loio/excluded_KA"
+    folder_path = args.data_dir
     train_data = dset.ImageFolder(os.path.join(folder_path, "train"), train_transform)
     valid_data = dset.ImageFolder(os.path.join(folder_path, "val"), valid_transform)
     logging.info(
