@@ -7,13 +7,14 @@ batch_size=$4
 genotype_dir=$5
 model_path=$6
 log_path=$7
+data_dir=$8
 
 if [ "$dataset" == "cifar10" ]; then
   python ./s1/test_cifar10.py --batch_size ${batch_size} --data ${data_path} --dir ${genotype_dir} --auxiliary --model_path ${model_path} --report_freq 100 --log_path ${log_path} --gpu ${gpu}
 elif [ "$dataset" == "cifar100" ]; then
   python ./s1/test_cifar100.py --batch_size ${batch_size} --data ${data_path} --dir ${genotype_dir} --auxiliary --model_path ${model_path} --report_freq 100 --log_path ${log_path} --gpu ${gpu}
 elif [ "$dataset" == "jaffe7" ]; then
-  python ./s1/test_jaffe7.py --batch_size ${batch_size} --data ${data_path} --dir ${genotype_dir} --auxiliary --model_path ${model_path} --report_freq 100 --log_path ${log_path} --gpu ${gpu}
+  python ./s1/test_jaffe7.py --batch_size ${batch_size} --data ${data_path} --dir ${genotype_dir} --auxiliary --model_path ${model_path} --report_freq 100 --log_path ${log_path} --gpu ${gpu} --data_dir ${data_dir}
 elif [ "$dataset" == "ckplus_2" ]; then
   python ./s1/test_ckplus_2.py --batch_size ${batch_size} --data ${data_path} --dir ${genotype_dir} --auxiliary --model_path ${model_path} --report_freq 100 --log_path ${log_path} --gpu ${gpu}
 elif [ "$dataset" == "ckplus_3" ]; then
