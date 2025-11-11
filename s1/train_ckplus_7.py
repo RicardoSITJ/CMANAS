@@ -125,8 +125,8 @@ def main():
         with open(os.path.join(args.dir, "genotype.pickle"), "rb") as f:
             genotype = pickle.load(f)
         print("Unpickling genotype.pickle")
-        visualize.plot(genotype.normal, os.path.join(args.save, "normal"), False)
-        visualize.plot(genotype.reduce, os.path.join(args.save, "reduction"), False)
+        # visualize.plot(genotype.normal, os.path.join(args.save, "normal"), False)
+        # visualize.plot(genotype.reduce, os.path.join(args.save, "reduction"), False)
 
     elif args.dir is not None:
         print("No genotype in the given directory")
