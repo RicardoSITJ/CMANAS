@@ -68,7 +68,7 @@ parser.add_argument(
     "--drop_path_prob", type=float, default=0.2, help="drop path probability"
 )
 parser.add_argument("--save", type=str, default="EXP", help="experiment name")
-parser.add_argument("--seed", type=int, default=None, help="random seed")
+parser.add_argument("--seed", type=int, default=42, help="random seed")
 parser.add_argument(
     "--arch", type=str, default="DARTS", help="which architecture to use"
 )
@@ -125,8 +125,8 @@ def main():
         with open(os.path.join(args.dir, "genotype.pickle"), "rb") as f:
             genotype = pickle.load(f)
         print("Unpickling genotype.pickle")
-        # visualize.plot(genotype.normal, os.path.join(args.save, "normal"), False)
-        # visualize.plot(genotype.reduce, os.path.join(args.save, "reduction"), False)
+        visualize.plot(genotype.normal, os.path.join(args.save, "normal"), False)
+        visualize.plot(genotype.reduce, os.path.join(args.save, "reduction"), False)
 
     elif args.dir is not None:
         print("No genotype in the given directory")

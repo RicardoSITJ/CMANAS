@@ -43,7 +43,7 @@ parser.add_argument("--cutout", action="store_true", default=False)
 parser.add_argument("--cutout_length", type=int, default=16)
 parser.add_argument("--drop_path_prob", type=float, default=0.2)
 parser.add_argument("--save", type=str, default="EXP")
-parser.add_argument("--seed", type=int, default=None)
+parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--arch", type=str, default="DARTS")
 parser.add_argument("--grad_clip", type=float, default=5)
 parser.add_argument(

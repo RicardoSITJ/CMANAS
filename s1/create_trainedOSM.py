@@ -75,7 +75,7 @@ parser.add_argument(
 parser.add_argument("--momentum", type=float, default=0.9, help="momentum")
 parser.add_argument("--pop_size", type=int, default=None, help="population size")
 parser.add_argument("--report_freq", type=float, default=100, help="report frequency")
-parser.add_argument("--seed", type=int, default=None, help="random seed")
+parser.add_argument("--seed", type=int, default=42, help="random seed")
 parser.add_argument(
     "--train_discrete",
     action="store_true",

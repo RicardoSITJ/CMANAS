@@ -85,7 +85,7 @@ parser.add_argument("--report_freq", type=float, default=100, help="report frequ
 parser.add_argument(
     "--run_id", type=int, default=None, help="running id for the experiment"
 )
-parser.add_argument("--seed", type=int, default=None, help="random seed")
+parser.add_argument("--seed", type=int, default=42, help="random seed")
 parser.add_argument(
     "--train_discrete",
     action="store_true",
