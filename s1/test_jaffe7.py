@@ -130,28 +130,81 @@ def main():
     print(f"test_acc {test_acc}")
 
 
+# def infer(test_queue, model, criterion):
+#     objs = ut.AvgrageMeter()
+#     top1 = ut.AvgrageMeter()
+#     top5 = ut.AvgrageMeter()
+#     model.eval()
+
+#     with torch.no_grad():
+#         for step, (input, target) in enumerate(test_queue):
+#             input = Variable(input, volatile=True).cuda()
+#             target = Variable(target, volatile=True).cuda()
+
+#             logits, _ = model(input)
+#             loss = criterion(logits, target)
+
+#             prec1, prec5 = ut.accuracy(logits, target, topk=(1, 2))
+#             n = input.size(0)
+#             objs.update(loss.data.item(), n)
+#             top1.update(prec1.data.item(), n)
+#             top5.update(prec5.data.item(), n)
+
+#             if step % args.report_freq == 0:
+#                 logging.info("test %03d %e %f %f", step, objs.avg, top1.avg, top5.avg)
+
+#     return top1.avg, objs.avg
+
+
 def infer(test_queue, model, criterion):
     objs = ut.AvgrageMeter()
     top1 = ut.AvgrageMeter()
     top5 = ut.AvgrageMeter()
     model.eval()
 
+    total_images = 0
+    total_time_ms = 0.0  # milliseconds
+
     with torch.no_grad():
         for step, (input, target) in enumerate(test_queue):
-            input = Variable(input, volatile=True).cuda()
-            target = Variable(target, volatile=True).cuda()
+
+            input = input.cuda()
+            target = target.cuda()
+
+            # ----- CUDA Timing -----
+            start_time = torch.cuda.Event(enable_timing=True)
+            end_time = torch.cuda.Event(enable_timing=True)
+
+            torch.cuda.synchronize()
+            start_time.record()
 
             logits, _ = model(input)
-            loss = criterion(logits, target)
 
+            end_time.record()
+            torch.cuda.synchronize()
+            # -----------------------
+
+            batch_time = start_time.elapsed_time(end_time)  # ms
+            total_time_ms += batch_time
+            total_images += input.size(0)
+
+            loss = criterion(logits, target)
             prec1, prec5 = ut.accuracy(logits, target, topk=(1, 2))
             n = input.size(0)
-            objs.update(loss.data.item(), n)
-            top1.update(prec1.data.item(), n)
-            top5.update(prec5.data.item(), n)
+
+            objs.update(loss.item(), n)
+            top1.update(prec1.item(), n)
+            top5.update(prec5.item(), n)
 
             if step % args.report_freq == 0:
                 logging.info("test %03d %e %f %f", step, objs.avg, top1.avg, top5.avg)
+
+    # Compute FPS
+    total_time_sec = total_time_ms / 1000.0
+    fps = total_images / total_time_sec if total_time_sec > 0 else 0
+
+    logging.info(f"[STATS] Processed {total_images} images in {total_time_sec:.3f} sec")
+    logging.info(f"[STATS] FPS: {fps:.2f}")
 
     return top1.avg, objs.avg
 
