@@ -287,7 +287,6 @@ def infer(test_queue, model, criterion):
     objs = ut.AvgrageMeter()
     top1 = ut.AvgrageMeter()
     top5 = ut.AvgrageMeter()
-
     model.eval()
 
     target_layer = f"cells.{args.layers - 1}"
@@ -300,13 +299,24 @@ def infer(test_queue, model, criterion):
     all_preds = []
     all_targets = []
 
+    # ✅ CUDA timing setup
+    start_time = torch.cuda.Event(enable_timing=True)
+    end_time = torch.cuda.Event(enable_timing=True)
+
+    total_images = 0
+
+    # ✅ start timer
+    start_time.record()
+
     for step, (input, target) in enumerate(test_queue):
         input = input.cuda()
         target = target.cuda()
+        batch_size = input.size(0)
 
+        # ✅ Forward pass
         logits, _ = model(input)
-        loss = criterion(logits, target)
 
+        loss = criterion(logits, target)
         prec1, prec5 = ut.accuracy(logits, target, topk=(1, 2))
         n = input.size(0)
 
@@ -314,15 +324,17 @@ def infer(test_queue, model, criterion):
         top1.update(prec1.item(), n)
         top5.update(prec5.item(), n)
 
-        # ✅ Save predictions for metrics
+        # ✅ Track how many images processed
+        total_images += batch_size
+
+        # ✅ Save predictions
         batch_preds = torch.argmax(logits, dim=1).cpu().numpy()
         batch_targets = target.cpu().numpy()
 
         all_preds.extend(batch_preds.tolist())
         all_targets.extend(batch_targets.tolist())
 
-        # ✅ Grad-CAM per image
-        batch_size = input.size(0)
+        # ✅ GradCAM for each image
         for i in range(batch_size):
             img = input[i].unsqueeze(0)
 
@@ -339,7 +351,19 @@ def infer(test_queue, model, criterion):
         if step % args.report_freq == 0:
             logging.info("test %03d %e %f %f", step, objs.avg, top1.avg, top5.avg)
 
-    # ✅ Save predictions/GT to file
+    # ✅ stop timer
+    end_time.record()
+    torch.cuda.synchronize()
+
+    # ✅ compute total time in seconds
+    total_time_ms = start_time.elapsed_time(end_time)  # ms
+    total_time_s = total_time_ms / 1000.0
+
+    fps = total_images / total_time_s
+    print(f"\n[STATS] Processed {total_images} images in {total_time_s:.3f} sec")
+    print(f"[STATS] FPS: {fps:.2f}")
+
+    # ✅ Save predictions/GT
     results = {"preds": all_preds, "targets": all_targets}
     with open("predictions_gt.pkl", "wb") as f:
         pickle.dump(results, f)
