@@ -205,6 +205,8 @@ def infer(test_queue, model, criterion):
 
     logging.info(f"[STATS] Processed {total_images} images in {total_time_sec:.3f} sec")
     logging.info(f"[STATS] FPS: {fps:.2f}")
+    print(f"[STATS] Processed {total_images} images in {total_time_sec:.3f} sec")
+    print(f"[STATS] FPS: {fps:.2f}")
 
     return top1.avg, objs.avg
 
