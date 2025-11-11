@@ -211,7 +211,7 @@ def main():
 #     return top1.avg, objs.avg
 
 
-def infer_n_times(test_queue, model, criterion, runs=5):
+def infer_n_times(test_queue, model, criterion, runs=10):
     model.eval()
 
     total_images = len(test_queue.dataset)
