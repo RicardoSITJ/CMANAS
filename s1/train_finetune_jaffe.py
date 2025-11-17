@@ -48,9 +48,9 @@ parser.add_argument("--arch", type=str, default="DARTS")
 parser.add_argument("--grad_clip", type=float, default=5)
 parser.add_argument(
     "--finetune",
-    action="store_true",
+    type=lambda x: x.lower() == "true",
     default=True,
-    help="If true, load best_weights.pt and continue training (fine-tune)",
+    help="True/False: load best_weights.pt and continue training",
 )
 args = parser.parse_args()
 
