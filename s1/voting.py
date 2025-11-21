@@ -83,22 +83,33 @@ def infer_voting(test_queue, model1, model2, criterion):
     objs = ut.AvgrageMeter()
     top1 = ut.AvgrageMeter()
 
+    all_preds = []
+    all_targets = []
+
     with torch.no_grad():
         for step, (input, target) in enumerate(test_queue):
             input = input.cuda()
             target = target.cuda()
 
-            # Forward
+            # Forward pass
             logits1, _ = model1(input)
             logits2, _ = model2(input)
 
-            # --- SOFT VOTING ---
+            # SOFT VOTING
             logits = (logits1 + logits2) / 2.0
 
+            # Predictions
+            preds = torch.argmax(logits, dim=1)
+
+            # Save predictions + targets
+            all_preds.extend(preds.cpu().numpy().tolist())
+            all_targets.extend(target.cpu().numpy().tolist())
+
+            # Loss and accuracy
             loss = criterion(logits, target)
             prec1, _ = ut.accuracy(logits, target, topk=(1, 2))
-
             n = input.size(0)
+
             objs.update(loss.item(), n)
             top1.update(prec1.item(), n)
 
@@ -106,6 +117,17 @@ def infer_voting(test_queue, model1, model2, criterion):
                 logging.info("test %03d %e %f", step, objs.avg, top1.avg)
 
     print(f"\n[VOTING] Final Accuracy: {top1.avg:.2f} | Loss: {objs.avg:.4f}")
+
+    # --------------------------------------------------------
+    # SAVE PREDS + TARGETS INTO PICKLE
+    # --------------------------------------------------------
+    out_path = os.path.join(args.dir if args.dir else ".", "voting_preds_targets.pkl")
+
+    with open(out_path, "wb") as f:
+        pickle.dump({"preds": all_preds, "targets": all_targets}, f)
+
+    print(f"[INFO] Saved predictions + targets → {out_path}")
+
     return top1.avg, objs.avg
 
 
