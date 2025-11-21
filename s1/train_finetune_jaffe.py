@@ -57,7 +57,7 @@ args = parser.parse_args()
 if args.seed is None or args.seed < 0:
     args.seed = random.randint(1, 100000)
 
-args.save = f"eval-{args.save}-1"
+args.save = f"eval-{args.save}-{args.seed}"
 if args.dir is not None:
     args.save = os.path.join(args.dir, args.save)
 ut.create_exp_dir(args.save)
