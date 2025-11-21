@@ -39,6 +39,9 @@ parser.add_argument(
 parser.add_argument(
     "--model_path_2", type=str, default=None, help="path to second pretrained model"
 )
+parser.add_argument(
+    "--model_path_3", type=str, default=None, help="path to third pretrained model"
+)
 parser.add_argument("--log_path", type=str, default=None, help="path of log file")
 parser.add_argument(
     "--auxiliary", action="store_true", default=False, help="use auxiliary tower"
@@ -76,9 +79,10 @@ CIFAR_CLASSES = 7
 # ---------------------------------------------------------------------
 #   TWO-MODEL SOFT VOTING INFERENCE
 # ---------------------------------------------------------------------
-def infer_voting(test_queue, model1, model2, criterion):
+def infer_voting(test_queue, model1, model2, model3, criterion):
     model1.eval()
     model2.eval()
+    model3.eval()
 
     objs = ut.AvgrageMeter()
     top1 = ut.AvgrageMeter()
@@ -94,9 +98,10 @@ def infer_voting(test_queue, model1, model2, criterion):
             # Forward pass
             logits1, _ = model1(input)
             logits2, _ = model2(input)
+            logits3, _ = model3(input)
 
             # SOFT VOTING
-            logits = (logits1 + logits2) / 2.0
+            logits = (logits1 + logits2 + logits3) / 3.0
 
             # Predictions
             preds = torch.argmax(logits, dim=1)
@@ -179,8 +184,19 @@ def main():
     ut.load(model2, args.model_path_2, args.gpu)
     model2 = model2.cuda()
 
+    # ------------------ MODEL 3 ------------------
+    if args.model_path_3 is None:
+        raise ValueError("You must provide --model_path_3 for voting")
+
+    model3 = Network(
+        args.init_channels, CIFAR_CLASSES, args.layers, args.auxiliary, genotype
+    )
+    ut.load(model3, args.model_path_3, args.gpu)
+    model3 = model3.cuda()
+
     logging.info("param size MODEL 1 = %fMB", ut.count_parameters_in_MB(model1))
     logging.info("param size MODEL 2 = %fMB", ut.count_parameters_in_MB(model2))
+    logging.info("param size MODEL 3 = %fMB", ut.count_parameters_in_MB(model3))
 
     criterion = nn.CrossEntropyLoss().cuda()
 
@@ -200,9 +216,10 @@ def main():
     # Disable stochastic depth
     model1.drop_path_prob = 0.0
     model2.drop_path_prob = 0.0
+    model3.drop_path_prob = 0.0
 
     # Run ensemble voting
-    test_acc, test_loss = infer_voting(test_queue, model1, model2, criterion)
+    test_acc, test_loss = infer_voting(test_queue, model1, model2, model3, criterion)
 
     logging.info("FINAL VOTING test_acc %f", test_acc)
     print(f"FINAL VOTING test_acc {test_acc}")
