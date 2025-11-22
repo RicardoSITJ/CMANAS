@@ -270,9 +270,18 @@ def main():
     _, test_transform = ut._data_transforms_ckplus(args)
     folder_path = args.data_dir
     test_data = dset.ImageFolder(osp.join(folder_path, "test"), test_transform)
+    val_data = dset.ImageFolder(osp.join(folder_path, "val"), test_transform)
 
     test_queue = torch.utils.data.DataLoader(
         test_data,
+        batch_size=args.batch_size,
+        shuffle=False,
+        pin_memory=True,
+        num_workers=0,
+    )
+
+    val_queue = torch.utils.data.DataLoader(
+        val_data,
         batch_size=args.batch_size,
         shuffle=False,
         pin_memory=True,
@@ -286,12 +295,20 @@ def main():
     # Run ensemble voting
     # test_acc, test_loss = infer_voting(test_queue, model1, model2, criterion)
     # ----------- STACKING (META-LEARNING) -----------
-    stack_acc = infer_stacking(
-        test_queue, model1, model2, criterion, meta_model_path=args.meta_model_path
+    # Train meta-model using val features
+    stack_acc_val = infer_stacking(
+        val_queue, model1, model2, criterion, meta_model_path=None
     )
 
-    logging.info("FINAL STACKING ACC %f", stack_acc)
-    print(f"FINAL STACKING test_acc {stack_acc}")
+    # Evaluate using same meta-model (do not retrain!)
+    meta_path = os.path.join(args.dir if args.dir else ".", "stacking_meta_model.pkl")
+
+    stack_acc_test = infer_stacking(
+        test_queue, model1, model2, criterion, meta_model_path=meta_path
+    )
+
+    logging.info("FINAL STACKING ACC %f", stack_acc_test)
+    print(f"FINAL STACKING test_acc {stack_acc_test}")
 
     # logging.info("FINAL VOTING test_acc %f", test_acc)
     # print(f"FINAL VOTING test_acc {test_acc}")
