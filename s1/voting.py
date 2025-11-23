@@ -126,7 +126,13 @@ def infer_voting(test_queue, model1, model2, model3, criterion):
     # --------------------------------------------------------
     # SAVE PREDS + TARGETS INTO PICKLE
     # --------------------------------------------------------
-    out_path = os.path.join(args.dir if args.dir else ".", "voting_preds_targets.pkl")
+    run1 = args.model_path.rstrip("/").split("eval-EXP-")[-1]
+    run2 = args.model_path_2.rstrip("/").split("eval-EXP-")[-1]
+    run3 = args.model_path_3.rstrip("/").split("eval-EXP-")[-1]
+    out_path = os.path.join(
+        args.dir if args.dir else ".",
+        f"voting_2_preds_targets_{run1}_{run2}_{run3}.pkl",
+    )
 
     with open(out_path, "wb") as f:
         pickle.dump({"preds": all_preds, "targets": all_targets}, f)
