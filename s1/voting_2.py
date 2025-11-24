@@ -121,8 +121,10 @@ def infer_voting(test_queue, model1, model2, criterion):
     # --------------------------------------------------------
     # SAVE PREDS + TARGETS INTO PICKLE
     # --------------------------------------------------------
-    run1 = args.model_path.rstrip("/").split("eval-EXP-")[-1]
-    run2 = args.model_path_2.rstrip("/").split("eval-EXP-")[-1]
+    run1 = os.path.basename(os.path.dirname(args.model_path))  # e.g. eval-EXP-YM-42-50
+    run2 = os.path.basename(os.path.dirname(args.model_path_2))
+    run1 = run1.replace("eval-EXP-", "")
+    run2 = run2.replace("eval-EXP-", "")
     out_path = os.path.join(
         args.dir if args.dir else ".", f"voting_2_preds_targets_{run1}_{run2}.pkl"
     )
