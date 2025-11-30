@@ -68,7 +68,7 @@ parser.add_argument(
     "--drop_path_prob", type=float, default=0.2, help="drop path probability"
 )
 parser.add_argument("--save", type=str, default="EXP", help="experiment name")
-parser.add_argument("--seed", type=int, default=42, help="random seed")
+parser.add_argument("--seed", type=int, default=4000, help="random seed")
 parser.add_argument(
     "--arch", type=str, default="DARTS", help="which architecture to use"
 )
