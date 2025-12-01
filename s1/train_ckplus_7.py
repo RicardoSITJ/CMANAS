@@ -111,6 +111,9 @@ def main():
 
     logging.info(f"Setting Global Seed: {args.seed}")
     seed_everything(args.seed)
+    # This ensures the DataLoader shuffle is isolated from other random calls
+    g = torch.Generator()
+    g.manual_seed(args.seed)
     device = torch.device("cuda:{}".format(args.gpu))
     torch.cuda.set_device(args.gpu)
     logging.info("gpu device = %d" % args.gpu)
@@ -163,6 +166,7 @@ def main():
         shuffle=True,
         pin_memory=True,
         num_workers=0,
+        generator=g,
     )
 
     valid_queue = torch.utils.data.DataLoader(
@@ -171,6 +175,7 @@ def main():
         shuffle=False,
         pin_memory=True,
         num_workers=0,
+        generator=g,
     )
 
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
