@@ -21,6 +21,7 @@ import torch.backends.cudnn as cudnn
 import torchvision
 from codecarbon import EmissionsTracker
 import gc
+from procedures import seed_everything
 
 from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
@@ -108,14 +109,10 @@ def main():
         logging.info("no gpu device available")
         sys.exit(1)
 
-    np.random.seed(args.seed)
-    torch.cuda.set_device(args.gpu)
+    logging.info(f"Setting Global Seed: {args.seed}")
+    seed_everything(args.seed)
     device = torch.device("cuda:{}".format(args.gpu))
-    cudnn.benchmark = False
-    torch.manual_seed(args.seed)
-    cudnn.enabled = True
-    torch.cuda.manual_seed(args.seed)
-    cudnn.deterministic = True
+    torch.cuda.set_device(args.gpu)
     logging.info("gpu device = %d" % args.gpu)
     logging.info("args = %s", args)
 
