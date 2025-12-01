@@ -28,7 +28,7 @@ from cma_es import CMAES
 from config_utils import load_config, dict2config
 from datasets import get_datasets, get_nas_search_loaders
 from log_utils import AverageMeter, time_string, convert_secs2time
-from procedures import prepare_seed, prepare_logger, save_checkpoint, copy_checkpoint
+from procedures import seed_everything, prepare_logger, save_checkpoint, copy_checkpoint
 from procedures import get_optim_scheduler
 from model_search import Network
 from torch.utils.data import DataLoader
@@ -268,12 +268,9 @@ def evaluate(
 
 def main(args):
     # Reproducibility
+    logging.info(f"Setting Global Seed: {args.seed}")
+    seed_everything(args.seed)
     device = torch.device("cuda:{}".format(args.gpu))
-    torch.backends.cudnn.enabled = True
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
-    prepare_seed(args.seed)
-    # torch.set_default_dtype(torch.float64)
     torch.cuda.set_device(args.gpu)
 
     logging.info("CMANAS with pre-trained one shot models for evaluation")
