@@ -9,7 +9,7 @@ from shutil import copyfile
 def seed_everything(seed: int):
     # 1. Set the environment variable FIRST (before CUDA initializes)
     # This is critical for reproducible CuBLAS operations
-    os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":16:8"
+    os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
     os.environ["PYTHONHASHSEED"] = str(seed)
 
     # 2. Standard python/numpy seeds
