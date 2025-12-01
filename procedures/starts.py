@@ -7,35 +7,37 @@ from shutil import copyfile
 
 
 def seed_everything(seed: int):
-    # 1. Set the environment variable FIRST (before CUDA initializes)
-    # This is critical for reproducible CuBLAS operations
-    os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
-    os.environ["PYTHONHASHSEED"] = str(seed)
-
-    # 2. Standard python/numpy seeds
+    # 1. Python & NumPy
     random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
     np.random.seed(seed)
 
-    # 3. PyTorch seeds
+    # 2. PyTorch
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
 
-    # 4. CuDNN Determinism
+    # 3. Determinism flags
     torch.backends.cudnn.enabled = True
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    # 5. Force strict determinism
-    # Note: If your code crashes with "determinism not implemented",
-    # comment out this line.
+    # 4. Strict Determinism (Optional: comment out if it crashes)
     try:
         torch.use_deterministic_algorithms(True)
     except AttributeError:
-        # Older pytorch versions might not have this function
         pass
 
     print(f"[INFO] Seeding everything with seed {seed}")
+
+
+def seed_worker(worker_id):
+    """
+    Ensures that data loader workers have deterministic seeds.
+    """
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
 
 
 def prepare_seed(rand_seed):
