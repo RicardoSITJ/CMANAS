@@ -1,7 +1,7 @@
 ##################################################
 # Copyright (c) Xuanyi Dong [GitHub D-X-Y], 2019 #
 ##################################################
-from .starts     import prepare_seed, prepare_logger, get_machine_info, save_checkpoint, copy_checkpoint
+from .starts     import seed_everything, prepare_logger, get_machine_info, save_checkpoint, copy_checkpoint
 from .optimizers import get_optim_scheduler
 from .funcs_nasbench import evaluate_for_seed as bench_evaluate_for_seed
 from .funcs_nasbench import pure_evaluate as bench_pure_evaluate
