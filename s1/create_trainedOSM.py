@@ -1,4 +1,8 @@
+import os
 import sys
+
+# Must be set before any torch/cuda imports
+os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 sys.path.insert(0, "./")
 
@@ -26,7 +30,13 @@ import gc
 from config_utils import load_config, dict2config
 from datasets import get_datasets, get_nas_search_loaders
 from log_utils import AverageMeter, time_string, convert_secs2time
-from procedures import seed_everything, prepare_logger, save_checkpoint, copy_checkpoint
+from procedures import (
+    seed_everything,
+    seed_worker,
+    prepare_logger,
+    save_checkpoint,
+    copy_checkpoint,
+)
 from procedures import get_optim_scheduler
 from model_search import Network
 from torch.utils.data import DataLoader
@@ -207,6 +217,9 @@ def main(args):
     # Reproducibility
     logging.info(f"Setting Global Seed: {args.seed}")
     seed_everything(args.seed)
+    # Create Generator for deterministic shuffling
+    g = torch.Generator()
+    g.manual_seed(args.seed)
     device = torch.device("cuda:{}".format(args.gpu))
     torch.cuda.set_device(args.gpu)
 
@@ -234,6 +247,8 @@ def main(args):
             pin_memory=True,
             num_workers=args.workers,
             sampler=torch.utils.data.sampler.SubsetRandomSampler(cifar100_split.train),
+            worker_init_fn=seed_worker,
+            generator=g,
         )
         valid_loader = torch.utils.data.DataLoader(
             train_data,
@@ -241,6 +256,8 @@ def main(args):
             pin_memory=True,
             num_workers=args.workers,
             sampler=torch.utils.data.sampler.SubsetRandomSampler(cifar100_split.valid),
+            worker_init_fn=seed_worker,
+            generator=g,
         )
     elif args.dataset == "cifar100" and (args.alt_cifar100_split == 2):
         logging.info("[INFO] Using 80-20 split for CIFAR100")
@@ -256,6 +273,8 @@ def main(args):
             pin_memory=True,
             num_workers=args.workers,
             sampler=torch.utils.data.sampler.SubsetRandomSampler(cifar100_split.train),
+            worker_init_fn=seed_worker,
+            generator=g,
         )
         valid_loader = torch.utils.data.DataLoader(
             train_data,
@@ -263,6 +282,8 @@ def main(args):
             pin_memory=True,
             num_workers=args.workers,
             sampler=torch.utils.data.sampler.SubsetRandomSampler(cifar100_split.valid),
+            worker_init_fn=seed_worker,
+            generator=g,
         )
     else:
         logging.info("[INFO] Using same split used in NAS_BENCH_201")
