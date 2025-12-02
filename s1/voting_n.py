@@ -180,6 +180,7 @@ def main():
         shuffle=False,
         pin_memory=True,
         num_workers=0,
+        generator=g,
     )
 
     # Run ensemble voting
