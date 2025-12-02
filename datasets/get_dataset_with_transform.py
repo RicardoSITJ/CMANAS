@@ -341,7 +341,9 @@ def get_nas_search_loaders(
         train_loader = torch.utils.data.DataLoader(
             train_data,
             batch_size=batch,
-            sampler=torch.utils.data.sampler.SubsetRandomSampler(train_split),
+            sampler=torch.utils.data.sampler.SubsetRandomSampler(
+                train_split, generator=generator
+            ),
             num_workers=workers,
             pin_memory=True,
             worker_init_fn=worker_init_fn,
@@ -350,7 +352,9 @@ def get_nas_search_loaders(
         valid_loader = torch.utils.data.DataLoader(
             xvalid_data,
             batch_size=test_batch,
-            sampler=torch.utils.data.sampler.SubsetRandomSampler(valid_split),
+            sampler=torch.utils.data.sampler.SubsetRandomSampler(
+                valid_split, generator=generator
+            ),
             num_workers=workers,
             pin_memory=True,
             worker_init_fn=worker_init_fn,
@@ -450,7 +454,7 @@ def get_nas_search_loaders(
             valid_data,
             batch_size=test_batch,
             sampler=torch.utils.data.sampler.SubsetRandomSampler(
-                cifar100_test_split.xvalid
+                cifar100_test_split.xvalid, generator=generator
             ),
             num_workers=workers,
             pin_memory=True,
@@ -492,7 +496,7 @@ def get_nas_search_loaders(
             valid_data,
             batch_size=test_batch,
             sampler=torch.utils.data.sampler.SubsetRandomSampler(
-                imagenet_test_split.xvalid
+                imagenet_test_split.xvalid, generator=generator
             ),
             num_workers=workers,
             pin_memory=True,
