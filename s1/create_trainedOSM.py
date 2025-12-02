@@ -246,7 +246,9 @@ def main(args):
             batch_size=args.batch_size,
             pin_memory=True,
             num_workers=args.workers,
-            sampler=torch.utils.data.sampler.SubsetRandomSampler(cifar100_split.train),
+            sampler=torch.utils.data.sampler.SubsetRandomSampler(
+                cifar100_split.train, generator=g
+            ),
             worker_init_fn=seed_worker,
             generator=g,
         )
@@ -255,7 +257,9 @@ def main(args):
             batch_size=args.valid_batch_size,
             pin_memory=True,
             num_workers=args.workers,
-            sampler=torch.utils.data.sampler.SubsetRandomSampler(cifar100_split.valid),
+            sampler=torch.utils.data.sampler.SubsetRandomSampler(
+                cifar100_split.valid, generator=g
+            ),
             worker_init_fn=seed_worker,
             generator=g,
         )
@@ -272,7 +276,9 @@ def main(args):
             batch_size=args.batch_size,
             pin_memory=True,
             num_workers=args.workers,
-            sampler=torch.utils.data.sampler.SubsetRandomSampler(cifar100_split.train),
+            sampler=torch.utils.data.sampler.SubsetRandomSampler(
+                cifar100_split.train, generator=g
+            ),
             worker_init_fn=seed_worker,
             generator=g,
         )
@@ -281,7 +287,9 @@ def main(args):
             batch_size=args.valid_batch_size,
             pin_memory=True,
             num_workers=args.workers,
-            sampler=torch.utils.data.sampler.SubsetRandomSampler(cifar100_split.valid),
+            sampler=torch.utils.data.sampler.SubsetRandomSampler(
+                cifar100_split.valid, generator=g
+            ),
             worker_init_fn=seed_worker,
             generator=g,
         )
