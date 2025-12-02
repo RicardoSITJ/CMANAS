@@ -24,7 +24,7 @@ import torch.backends.cudnn as cudnn
 import torchvision
 from codecarbon import EmissionsTracker
 import gc
-from procedures import seed_everything
+from procedures import seed_everything, seed_worker
 
 from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
@@ -170,6 +170,7 @@ def main():
         pin_memory=True,
         num_workers=0,
         generator=g,
+        worker_init_fn=seed_worker,
     )
 
     valid_queue = torch.utils.data.DataLoader(
@@ -179,6 +180,7 @@ def main():
         pin_memory=True,
         num_workers=0,
         generator=g,
+        worker_init_fn=seed_worker,
     )
 
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
