@@ -290,7 +290,14 @@ def get_datasets(name, root, cutout):
 
 
 def get_nas_search_loaders(
-    train_data, valid_data, dataset, config_root, batch_size, workers
+    train_data,
+    valid_data,
+    dataset,
+    config_root,
+    batch_size,
+    workers,
+    worker_init_fn=None,
+    generator=None,
 ):
     """
     train_data, valid_data: output from get_datasets()
@@ -298,6 +305,8 @@ def get_nas_search_loaders(
     config_root: directory of configuration files
     batch_size: batch_size chosen
     workers: # workers chosen
+    worker_init_fn: Function to seed workers
+    generator: torch.Generator for reproducibility
 
     Returns search_loader, train_loader, valid_loader
     """
@@ -326,6 +335,8 @@ def get_nas_search_loaders(
             shuffle=True,
             num_workers=workers,
             pin_memory=True,
+            worker_init_fn=worker_init_fn,
+            generator=generator,
         )
         train_loader = torch.utils.data.DataLoader(
             train_data,
@@ -333,6 +344,8 @@ def get_nas_search_loaders(
             sampler=torch.utils.data.sampler.SubsetRandomSampler(train_split),
             num_workers=workers,
             pin_memory=True,
+            worker_init_fn=worker_init_fn,
+            generator=generator,
         )
         valid_loader = torch.utils.data.DataLoader(
             xvalid_data,
@@ -340,16 +353,22 @@ def get_nas_search_loaders(
             sampler=torch.utils.data.sampler.SubsetRandomSampler(valid_split),
             num_workers=workers,
             pin_memory=True,
+            worker_init_fn=worker_init_fn,
+            generator=generator,
         )
 
     elif dataset in ["jaffe7", "ckplus_2", "ckplus_3", "ckplus_7"]:
-        # Ensure reproducibility
-        random.seed(42)
-
         full_dataset = torch.utils.data.ConcatDataset([train_data, valid_data])
         num_total = len(full_dataset)
-        indices = list(range(num_total))
-        random.shuffle(indices)
+
+        if generator is not None:
+            # Generate deterministic indices using the provided generator
+            indices = torch.randperm(num_total, generator=generator).tolist()
+        else:
+            # Fallback (legacy behavior)
+            indices = list(range(num_total))
+            random.shuffle(indices)
+
         split = int(0.8 * num_total)
         train_split, valid_split = indices[:split], indices[split:]
 
@@ -359,8 +378,12 @@ def get_nas_search_loaders(
             valid_full_dataset.transform = deepcopy(valid_data.transform)
 
         # Use the same SearchDataset class or a simplified dataset as fallback
-        train_sampler = torch.utils.data.SubsetRandomSampler(train_split)
-        valid_sampler = torch.utils.data.SubsetRandomSampler(valid_split)
+        train_sampler = torch.utils.data.SubsetRandomSampler(
+            train_split, generator=generator
+        )
+        valid_sampler = torch.utils.data.SubsetRandomSampler(
+            valid_split, generator=generator
+        )
         search_data = SearchDataset(dataset, full_dataset, train_split, valid_split)
 
         search_loader = torch.utils.data.DataLoader(
@@ -369,6 +392,8 @@ def get_nas_search_loaders(
             shuffle=True,
             num_workers=workers,
             pin_memory=True,
+            worker_init_fn=worker_init_fn,
+            generator=generator,
         )
 
         train_loader = torch.utils.data.DataLoader(
@@ -377,6 +402,8 @@ def get_nas_search_loaders(
             sampler=train_sampler,
             num_workers=workers,
             pin_memory=True,
+            worker_init_fn=worker_init_fn,
+            generator=generator,
         )
 
         valid_loader = torch.utils.data.DataLoader(
@@ -385,6 +412,8 @@ def get_nas_search_loaders(
             sampler=valid_sampler,
             num_workers=workers,
             pin_memory=True,
+            worker_init_fn=worker_init_fn,
+            generator=generator,
         )
     elif dataset == "cifar100":
         cifar100_test_split = load_config(
@@ -405,6 +434,8 @@ def get_nas_search_loaders(
             shuffle=True,
             num_workers=workers,
             pin_memory=True,
+            worker_init_fn=worker_init_fn,
+            generator=generator,
         )
         train_loader = torch.utils.data.DataLoader(
             train_data,
@@ -412,6 +443,8 @@ def get_nas_search_loaders(
             shuffle=True,
             num_workers=workers,
             pin_memory=True,
+            worker_init_fn=worker_init_fn,
+            generator=generator,
         )
         valid_loader = torch.utils.data.DataLoader(
             valid_data,
@@ -421,6 +454,8 @@ def get_nas_search_loaders(
             ),
             num_workers=workers,
             pin_memory=True,
+            worker_init_fn=worker_init_fn,
+            generator=generator,
         )
     elif dataset == "ImageNet16-120":
         imagenet_test_split = load_config(
@@ -441,6 +476,8 @@ def get_nas_search_loaders(
             shuffle=True,
             num_workers=workers,
             pin_memory=True,
+            worker_init_fn=worker_init_fn,
+            generator=generator,
         )
         train_loader = torch.utils.data.DataLoader(
             train_data,
@@ -448,6 +485,8 @@ def get_nas_search_loaders(
             shuffle=True,
             num_workers=workers,
             pin_memory=True,
+            worker_init_fn=worker_init_fn,
+            generator=generator,
         )
         valid_loader = torch.utils.data.DataLoader(
             valid_data,
@@ -457,6 +496,8 @@ def get_nas_search_loaders(
             ),
             num_workers=workers,
             pin_memory=True,
+            worker_init_fn=worker_init_fn,
+            generator=generator,
         )
     else:
         raise ValueError("invalid dataset : {:}".format(dataset))
