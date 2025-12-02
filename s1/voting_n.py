@@ -1,8 +1,11 @@
+import os
 import sys
+
+# Must be set before any torch/cuda imports
+os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 sys.path.insert(0, "./")
 
-import os
 import os.path as osp
 import glob
 import numpy as np
@@ -19,6 +22,7 @@ import torch.backends.cudnn as cudnn
 from torch.autograd import Variable
 from model import NetworkCIFAR as Network
 import pickle
+from procedures import seed_everything
 
 parser = argparse.ArgumentParser("cifar")
 parser.add_argument("--data", type=str, default="../data")
@@ -128,12 +132,12 @@ def main():
         logging.info("No GPU available")
         sys.exit(1)
 
-    np.random.seed(args.seed)
+    logging.info(f"Setting Global Seed: {args.seed}")
+    seed_everything(args.seed)
+    # This ensures the DataLoader shuffle is isolated from other random calls
+    g = torch.Generator()
+    g.manual_seed(args.seed)
     torch.cuda.set_device(args.gpu)
-    torch.manual_seed(args.seed)
-    torch.cuda.manual_seed(args.seed)
-    cudnn.benchmark = True
-    cudnn.enabled = True
 
     # Load genotype
     if args.arch is not None:

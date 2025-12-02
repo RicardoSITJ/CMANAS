@@ -1,5 +1,9 @@
 import os
 import sys
+
+# Must be set before any torch/cuda imports
+os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+
 import time
 import glob
 import random
@@ -14,6 +18,7 @@ import torchvision.datasets as dset
 import torchvision
 from codecarbon import EmissionsTracker
 import gc
+from procedures import seed_everything
 
 sys.path.insert(0, "./")
 import ut
@@ -87,13 +92,13 @@ def main():
         logging.info("no gpu device available")
         sys.exit(1)
 
-    np.random.seed(args.seed)
-    torch.cuda.set_device(args.gpu)
-    cudnn.benchmark = False
-    torch.manual_seed(args.seed)
-    torch.cuda.manual_seed(args.seed)
-    cudnn.deterministic = True
+    logging.info(f"Setting Global Seed: {args.seed}")
+    seed_everything(args.seed)
+    # This ensures the DataLoader shuffle is isolated from other random calls
+    g = torch.Generator()
+    g.manual_seed(args.seed)
     device = torch.device(f"cuda:{args.gpu}")
+    torch.cuda.set_device(args.gpu)
     logging.info(f"gpu device = {args.gpu}")
     logging.info(f"args = {args}")
 

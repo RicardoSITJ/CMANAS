@@ -371,6 +371,8 @@ def main(args):
             config_root="configs",
             batch_size=(args.batch_size, args.valid_batch_size),
             workers=args.workers,
+            worker_init_fn=seed_worker,
+            generator=g,
         )
     logging.info(
         "train_loader length: {}, valid_loader length: {}".format(
