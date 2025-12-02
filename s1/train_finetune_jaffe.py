@@ -18,7 +18,7 @@ import torchvision.datasets as dset
 import torchvision
 from codecarbon import EmissionsTracker
 import gc
-from procedures import seed_everything
+from procedures import seed_everything, seed_worker
 
 sys.path.insert(0, "./")
 import ut
@@ -150,10 +150,22 @@ def main():
     )
 
     train_queue = torch.utils.data.DataLoader(
-        train_data, batch_size=args.batch_size, shuffle=True, pin_memory=True
+        train_data,
+        batch_size=args.batch_size,
+        shuffle=True,
+        pin_memory=True,
+        num_workers=0,
+        generator=g,
+        worker_init_fn=seed_worker,
     )
     valid_queue = torch.utils.data.DataLoader(
-        valid_data, batch_size=args.batch_size, shuffle=False, pin_memory=True
+        valid_data,
+        batch_size=args.batch_size,
+        shuffle=False,
+        pin_memory=True,
+        num_workers=0,
+        generator=g,
+        worker_init_fn=seed_worker,
     )
 
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
