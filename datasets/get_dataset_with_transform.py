@@ -266,20 +266,8 @@ def get_datasets(name, root, cutout):
         train_data = ImageNet16(root, True, train_transform, 200)
         test_data = ImageNet16(root, False, test_transform, 200)
         assert len(train_data) == 254775 and len(test_data) == 10000
-    elif name == "jaffe7":
-        folder_path = "/kaggle/working/CMANAS/datasets/loso/excluded_KA"
-        train_data = dset.ImageFolder(osp.join(folder_path, "train"), train_transform)
-        test_data = dset.ImageFolder(osp.join(folder_path, "val"), test_transform)
-    elif name == "ckplus_2":
-        folder_path = "/kaggle/working/CMANAS/datasets/ckplus_split/2_class"
-        train_data = dset.ImageFolder(osp.join(folder_path, "train"), train_transform)
-        test_data = dset.ImageFolder(osp.join(folder_path, "val"), test_transform)
-    elif name == "ckplus_3":
-        folder_path = "/kaggle/working/CMANAS/datasets/ckplus_split/3_class"
-        train_data = dset.ImageFolder(osp.join(folder_path, "train"), train_transform)
-        test_data = dset.ImageFolder(osp.join(folder_path, "val"), test_transform)
-    elif name == "ckplus_7":
-        folder_path = "/kaggle/working/CMANAS/datasets/ckplus_split/7_class"
+    elif name in ["jaffe7", "ckplus_2", "ckplus_3", "ckplus_7"]:
+        folder_path = root
         train_data = dset.ImageFolder(osp.join(folder_path, "train"), train_transform)
         test_data = dset.ImageFolder(osp.join(folder_path, "val"), test_transform)
     else:
