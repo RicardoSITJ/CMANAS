@@ -154,7 +154,7 @@ def main():
     )
 
     train_transform, valid_transform = ut._data_transforms_ckplus(args)
-    folder_path = "/kaggle/working/CMANAS/datasets/ckplus_split/7_class"
+    folder_path = args.data
     train_data = dset.ImageFolder(osp.join(folder_path, "train"), train_transform)
     valid_data = dset.ImageFolder(osp.join(folder_path, "val"), valid_transform)
     logging.info(
