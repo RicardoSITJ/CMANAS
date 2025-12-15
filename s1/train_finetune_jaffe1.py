@@ -53,6 +53,12 @@ parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--arch", type=str, default="DARTS")
 parser.add_argument("--grad_clip", type=float, default=5)
 parser.add_argument(
+    "--dropout_rate",
+    type=float,
+    default=0.0,
+    help="Dropout rate before classifier (0.0 means no dropout)",
+)
+parser.add_argument(
     "--finetune",
     type=lambda x: x.lower() == "true",
     default=True,
@@ -116,7 +122,12 @@ def main():
 
     # Model setup
     model = Network(
-        args.init_channels, CIFAR_CLASSES, args.layers, args.auxiliary, genotype
+        args.init_channels,
+        CIFAR_CLASSES,
+        args.layers,
+        args.auxiliary,
+        genotype,
+        dropout_prob=args.dropout_rate,
     ).cuda()
     logging.info("param size = %fMB", ut.count_parameters_in_MB(model))
 
