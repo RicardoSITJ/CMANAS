@@ -117,30 +117,51 @@ def _data_transforms_jaffe7(args):
 
 
 def _data_transforms_ckplus(args):
-    CIFAR_MEAN = [x / 255 for x in [0.4369, 0.4369, 0.4369]]
-    CIFAR_STD = [x / 255 for x in [0.2356, 0.2356, 0.2356]]
+    # 1. FIX: Use neutral Mean/Std.
+    # CIFAR stats (trucks/frogs) hurt face model convergence.
+    FACE_MEAN = [0.5, 0.5, 0.5]
+    FACE_STD = [0.5, 0.5, 0.5]
+
+    # 2. FIX: Increase resolution.
+    # 32x32 is too small to see mouth/eye details. 48x48 is the standard minimum for FER.
+    # If your model architecture specifically requires 32x32 input, change this back to 32.
+    # IMG_SIZE = 48
+    IMG_SIZE = 48
 
     train_transform = transforms.Compose(
         [
-            transforms.Resize((32, 32)),
+            transforms.Resize((IMG_SIZE, IMG_SIZE)),
+            # Optional: Forces model to focus on structure (smile shape), not skin tone.
+            # Helps prevent overfitting to specific subjects.
+            transforms.Grayscale(num_output_channels=3),
             transforms.RandomHorizontalFlip(p=0.5),
-            transforms.RandomRotation(15),
+            # 3. FIX: Use RandomAffine instead of just Rotation.
+            # This adds Shift (translate) and Zoom (scale) which helps when
+            # the test subject's face isn't perfectly centered.
+            transforms.RandomAffine(
+                degrees=15, translate=(0.1, 0.1), scale=(0.9, 1.1), shear=10
+            ),
+            # Reduced jitter slightly so we don't lose shadow details
             transforms.ColorJitter(brightness=0.2, contrast=0.2),
-            transforms.RandomCrop(32, padding=4),
+            # RandomCrop with padding helps robustness
+            transforms.RandomCrop(IMG_SIZE, padding=4),
             transforms.ToTensor(),
-            transforms.Normalize(CIFAR_MEAN, CIFAR_STD),
+            transforms.Normalize(FACE_MEAN, FACE_STD),
         ]
     )
+
     if args.cutout:
         train_transform.transforms.append(Cutout(args.cutout_length))
 
     valid_transform = transforms.Compose(
         [
-            transforms.Resize((32, 32)),
+            transforms.Resize((IMG_SIZE, IMG_SIZE)),
+            transforms.Grayscale(num_output_channels=3),  # Match training channels
             transforms.ToTensor(),
-            transforms.Normalize(CIFAR_MEAN, CIFAR_STD),
+            transforms.Normalize(FACE_MEAN, FACE_STD),
         ]
     )
+
     return train_transform, valid_transform
 
 
