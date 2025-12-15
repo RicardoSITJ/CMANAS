@@ -203,26 +203,46 @@ def get_datasets(name, root, cutout):
         )
         xshape = (1, 3, 224, 224)
     elif name in ["jaffe7", "ckplus_2", "ckplus_3", "ckplus_7"]:
+        # 1. FIX: Use neutral Mean/Std.
+        # CIFAR stats (trucks/frogs) hurt face model convergence.
+        FACE_MEAN = [0.5, 0.5, 0.5]
+        FACE_STD = [0.5, 0.5, 0.5]
+
+        # 2. FIX: Increase resolution.
+        # 32x32 is too small to see mouth/eye details. 48x48 is the standard minimum for FER.
+        IMG_SIZE = 48
+
         lists = [
-            transforms.Resize((32, 32)),
+            transforms.Resize((IMG_SIZE, IMG_SIZE)),
+            # Optional: Forces model to focus on structure (smile shape), not skin tone.
+            transforms.Grayscale(num_output_channels=3),
             transforms.RandomHorizontalFlip(p=0.5),
-            transforms.RandomRotation(15),
+            # 3. FIX: Use RandomAffine instead of just Rotation.
+            # Adds Shift (translate) and Zoom (scale) for robustness.
+            transforms.RandomAffine(
+                degrees=15, translate=(0.1, 0.1), scale=(0.9, 1.1), shear=10
+            ),
             transforms.ColorJitter(brightness=0.2, contrast=0.2),
-            transforms.RandomCrop(32, padding=4),
+            transforms.RandomCrop(IMG_SIZE, padding=4),
             transforms.ToTensor(),
-            transforms.Normalize(mean, std),
+            transforms.Normalize(FACE_MEAN, FACE_STD),
         ]
+
         if cutout > 0:
             lists += [CUTOUT(cutout)]
+
         train_transform = transforms.Compose(lists)
+
         test_transform = transforms.Compose(
             [
-                transforms.Resize((32, 32)),
+                transforms.Resize((IMG_SIZE, IMG_SIZE)),
+                transforms.Grayscale(num_output_channels=3),  # Match training channels
                 transforms.ToTensor(),
-                transforms.Normalize(mean, std),
+                transforms.Normalize(FACE_MEAN, FACE_STD),
             ]
         )
-        xshape = (1, 3, 32, 32)
+        # Update shape to match new resolution
+        xshape = (1, 3, IMG_SIZE, IMG_SIZE)
     else:
         raise TypeError("Unknow dataset : {:}".format(name))
 
