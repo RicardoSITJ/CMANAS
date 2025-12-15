@@ -117,10 +117,13 @@ class AuxiliaryHeadImageNet(nn.Module):
 
 class NetworkCIFAR(nn.Module):
 
-    def __init__(self, C, num_classes, layers, auxiliary, genotype, flag=True):
+    def __init__(
+        self, C, num_classes, layers, auxiliary, genotype, flag=True, dropout_prob=0.0
+    ):
         super(NetworkCIFAR, self).__init__()
         self._layers = layers
         self._auxiliary = auxiliary
+        self.dropout_prob = dropout_prob
 
         stem_multiplier = 3
         C_curr = stem_multiplier * C
@@ -149,6 +152,11 @@ class NetworkCIFAR(nn.Module):
         if auxiliary:
             self.auxiliary_head = AuxiliaryHeadCIFAR(C_to_auxiliary, num_classes)
         self.global_pooling = nn.AdaptiveAvgPool2d(1)
+
+        # Define Dropout layer if probability > 0
+        if self.dropout_prob > 0:
+            self.dropout = nn.Dropout(p=self.dropout_prob)
+
         self.classifier = nn.Linear(C_prev, num_classes)
 
     def forward(self, input):
@@ -160,16 +168,25 @@ class NetworkCIFAR(nn.Module):
                 if self._auxiliary and self.training:
                     logits_aux = self.auxiliary_head(s1)
         out = self.global_pooling(s1)
-        logits = self.classifier(out.view(out.size(0), -1))
+        out = out.view(out.size(0), -1)
+
+        # Apply Dropout
+        if self.dropout_prob > 0:
+            out = self.dropout(out)
+
+        logits = self.classifier(out)
         return logits, logits_aux
 
 
 class NetworkImageNet(nn.Module):
 
-    def __init__(self, C, num_classes, layers, auxiliary, genotype, flag=True):
+    def __init__(
+        self, C, num_classes, layers, auxiliary, genotype, flag=True, dropout_prob=0.0
+    ):
         super(NetworkImageNet, self).__init__()
         self._layers = layers
         self._auxiliary = auxiliary
+        self.dropout_prob = dropout_prob
 
         self.stem0 = nn.Sequential(
             nn.Conv2d(3, C // 2, kernel_size=3, stride=2, padding=1, bias=False),
@@ -207,6 +224,11 @@ class NetworkImageNet(nn.Module):
         if auxiliary:
             self.auxiliary_head = AuxiliaryHeadImageNet(C_to_auxiliary, num_classes)
         self.global_pooling = nn.AvgPool2d(7)
+
+        # Define Dropout layer
+        if self.dropout_prob > 0:
+            self.dropout = nn.Dropout(p=self.dropout_prob)
+
         self.classifier = nn.Linear(C_prev, num_classes)
 
     def forward(self, input):
@@ -219,5 +241,11 @@ class NetworkImageNet(nn.Module):
                 if self._auxiliary and self.training:
                     logits_aux = self.auxiliary_head(s1)
         out = self.global_pooling(s1)
-        logits = self.classifier(out.view(out.size(0), -1))
+        out = out.view(out.size(0), -1)
+
+        # Apply Dropout
+        if self.dropout_prob > 0:
+            out = self.dropout(out)
+
+        logits = self.classifier(out)
         return logits, logits_aux
