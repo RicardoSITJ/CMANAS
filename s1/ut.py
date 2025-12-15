@@ -153,7 +153,8 @@ def _data_transforms_ckplus1(args):
     # 2. FIX: Increase resolution.
     # 32x32 is too small to see mouth/eye details. 48x48 is the standard minimum for FER.
     # If your model architecture specifically requires 32x32 input, change this back to 32.
-    IMG_SIZE = 48
+    # IMG_SIZE = 48
+    IMG_SIZE = 64
 
     train_transform = transforms.Compose(
         [
