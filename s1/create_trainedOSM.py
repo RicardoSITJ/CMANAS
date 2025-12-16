@@ -330,7 +330,7 @@ def main(args):
         T_max=float(args.epochs + args.warm_up),
         eta_min=args.learning_rate_min,
     )
-    criterion = criterion.cuda()
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1).cuda()
     logging.info(f"optimizer: {optimizer}\nCriterion: {criterion}")
     logging.info(f"Scheduler: {scheduler}")
 

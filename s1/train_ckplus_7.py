@@ -144,7 +144,7 @@ def main():
 
     logging.info("param size = %fMB", ut.count_parameters_in_MB(model))
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
     criterion = criterion.cuda()
     optimizer = torch.optim.SGD(
         model.parameters(),

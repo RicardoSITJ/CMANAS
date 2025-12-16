@@ -119,7 +119,7 @@ def main():
     ).cuda()
     logging.info("param size = %fMB", ut.count_parameters_in_MB(model))
 
-    criterion = nn.CrossEntropyLoss().cuda()
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1).cuda()
     optimizer = torch.optim.SGD(
         model.parameters(),
         args.learning_rate,

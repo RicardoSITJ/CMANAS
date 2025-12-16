@@ -392,7 +392,7 @@ def main(args):
     )
     logging.info(f"config: {config}")
     _, _, criterion = get_optim_scheduler(parameters=model.parameters(), config=config)
-    criterion = criterion.cuda()
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1).cuda()
     logging.info(f"Criterion: {criterion}")
 
     # Initializing the CMA-ES optimizer for the architecture search
