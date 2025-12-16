@@ -165,55 +165,6 @@ def _data_transforms_ckplus(args):
     return train_transform, valid_transform
 
 
-def _data_transforms_ckplus1(args):
-    # 1. FIX: Use neutral Mean/Std.
-    # CIFAR stats (trucks/frogs) hurt face model convergence.
-    FACE_MEAN = [0.5, 0.5, 0.5]
-    FACE_STD = [0.5, 0.5, 0.5]
-
-    # 2. FIX: Increase resolution.
-    # 32x32 is too small to see mouth/eye details. 48x48 is the standard minimum for FER.
-    # If your model architecture specifically requires 32x32 input, change this back to 32.
-    # IMG_SIZE = 48
-    IMG_SIZE = 64
-
-    train_transform = transforms.Compose(
-        [
-            transforms.Resize((IMG_SIZE, IMG_SIZE)),
-            # Optional: Forces model to focus on structure (smile shape), not skin tone.
-            # Helps prevent overfitting to specific subjects.
-            transforms.Grayscale(num_output_channels=3),
-            transforms.RandomHorizontalFlip(p=0.5),
-            # 3. FIX: Use RandomAffine instead of just Rotation.
-            # This adds Shift (translate) and Zoom (scale) which helps when
-            # the test subject's face isn't perfectly centered.
-            transforms.RandomAffine(
-                degrees=15, translate=(0.1, 0.1), scale=(0.9, 1.1), shear=10
-            ),
-            # Reduced jitter slightly so we don't lose shadow details
-            transforms.ColorJitter(brightness=0.2, contrast=0.2),
-            # RandomCrop with padding helps robustness
-            transforms.RandomCrop(IMG_SIZE, padding=4),
-            transforms.ToTensor(),
-            transforms.Normalize(FACE_MEAN, FACE_STD),
-        ]
-    )
-
-    if args.cutout:
-        train_transform.transforms.append(Cutout(args.cutout_length))
-
-    valid_transform = transforms.Compose(
-        [
-            transforms.Resize((IMG_SIZE, IMG_SIZE)),
-            transforms.Grayscale(num_output_channels=3),  # Match training channels
-            transforms.ToTensor(),
-            transforms.Normalize(FACE_MEAN, FACE_STD),
-        ]
-    )
-
-    return train_transform, valid_transform
-
-
 def _data_transforms_cifar100(args):
     CIFAR_MEAN = [0.5071, 0.4867, 0.4408]
     CIFAR_STD = [0.2675, 0.2565, 0.2761]

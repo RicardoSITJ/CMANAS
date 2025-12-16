@@ -214,7 +214,7 @@ def main():
 
     criterion = nn.CrossEntropyLoss().cuda()
 
-    _, test_transform = ut._data_transforms_ckplus1(args)
+    _, test_transform = ut._data_transforms_ckplus(args)
     folder_path = args.data_dir
     test_data = dset.ImageFolder(osp.join(folder_path, "test"), test_transform)
 

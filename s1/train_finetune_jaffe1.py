@@ -156,7 +156,7 @@ def main():
     #  MODIFIED DATASET LOADING
     # ============================
     # Only using train_transform so that even the validation folder gets augmented
-    train_transform, _ = ut._data_transforms_ckplus1(args)
+    train_transform, _ = ut._data_transforms_ckplus(args)
     folder_path = args.data_dir
 
     # Load both folders using the TRAIN transform
