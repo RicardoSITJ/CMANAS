@@ -18,7 +18,6 @@ import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import torchvision.datasets as dset
 import torchvision
-from torch.utils.data import ConcatDataset  # <--- Added this import
 from codecarbon import EmissionsTracker
 import gc
 from procedures import seed_everything, seed_worker
@@ -52,12 +51,6 @@ parser.add_argument("--save", type=str, default="EXP")
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--arch", type=str, default="DARTS")
 parser.add_argument("--grad_clip", type=float, default=5)
-parser.add_argument(
-    "--dropout_rate",
-    type=float,
-    default=0.0,
-    help="Dropout rate before classifier (0.0 means no dropout)",
-)
 parser.add_argument(
     "--finetune",
     type=lambda x: x.lower() == "true",
@@ -122,20 +115,16 @@ def main():
 
     # Model setup
     model = Network(
-        args.init_channels,
-        CIFAR_CLASSES,
-        args.layers,
-        args.auxiliary,
-        genotype,
-        dropout_prob=args.dropout_rate,
+        args.init_channels, CIFAR_CLASSES, args.layers, args.auxiliary, genotype
     ).cuda()
     logging.info("param size = %fMB", ut.count_parameters_in_MB(model))
 
-    criterion = nn.CrossEntropyLoss().cuda()
-    optimizer = torch.optim.SGD(
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1).cuda()
+    optimizer = torch.optim.AdamW(
         model.parameters(),
-        args.learning_rate,
-        momentum=args.momentum,
+        lr=args.learning_rate,  # AdamW usually prefers a smaller LR than SGD (e.g., 1e-3 or 5e-4)
+        betas=(0.9, 0.999),  # Standard defaults for AdamW
+        eps=1e-8,  # Term added to the denominator to improve numerical stability
         weight_decay=args.weight_decay,
     )
 
@@ -152,27 +141,17 @@ def main():
             f"[WARN] No best_weights.pt found at {best_model_path}, starting from scratch."
         )
 
-    # ============================
-    #  MODIFIED DATASET LOADING
-    # ============================
-    # Only using train_transform so that even the validation folder gets augmented
-    train_transform, _ = ut._data_transforms_ckplus(args)
+    # Dataset
+    train_transform, valid_transform = ut._data_transforms_ckplus(args)
     folder_path = args.data_dir
-
-    # Load both folders using the TRAIN transform
-    train_part = dset.ImageFolder(os.path.join(folder_path, "train"), train_transform)
-    valid_part = dset.ImageFolder(os.path.join(folder_path, "val"), train_transform)
-
-    # Combine them
-    full_data = ConcatDataset([train_part, valid_part])
-
+    train_data = dset.ImageFolder(os.path.join(folder_path, "train"), train_transform)
+    valid_data = dset.ImageFolder(os.path.join(folder_path, "val"), valid_transform)
     logging.info(
-        f"[INFO] Combined Dataset Length: {len(full_data)} (Train: {len(train_part)} + Val: {len(valid_part)})"
+        f"[INFO] len(train_data): {len(train_data)}, len(valid_data): {len(valid_data)}"
     )
 
-    # Create one queue for everything
     train_queue = torch.utils.data.DataLoader(
-        full_data,
+        train_data,
         batch_size=args.batch_size,
         shuffle=True,
         pin_memory=True,
@@ -180,9 +159,15 @@ def main():
         generator=g,
         worker_init_fn=seed_worker,
     )
-
-    # No separate valid queue needed
-    valid_queue = None
+    valid_queue = torch.utils.data.DataLoader(
+        valid_data,
+        batch_size=args.batch_size,
+        shuffle=False,
+        pin_memory=True,
+        num_workers=0,
+        generator=g,
+        worker_init_fn=seed_worker,
+    )
 
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, float(args.epochs)
@@ -207,10 +192,10 @@ def main():
         model.drop_path_prob = args.drop_path_prob * epoch / args.epochs
 
         epoch_start = time.time()
-
-        # Train on full data
         train_acc, train_obj = train(train_queue, model, criterion, optimizer)
-
+        # logging.info(
+        #     f"[INFO] train_acc {train_acc:.4f} finished in {(time.time() - epoch_start) / 60:.2f} minutes"
+        # )
         logging.info(
             f"[INFO] train_acc {train_acc.item():.4f} finished in {(time.time() - epoch_start) / 60:.2f} minutes"
         )
@@ -219,16 +204,9 @@ def main():
         writer.add_scalar("train_obj", train_obj, epoch + 1)
         scheduler.step()
 
-        # ============================
-        # SKIP VALIDATION INFERENCE
-        # ============================
-        # We set valid_acc = train_acc so the rest of the script logic
-        # (saving best weights) continues to work based on training fit.
-        valid_acc = train_acc
-        valid_obj = train_obj
-
-        logging.info(f"[INFO] valid_acc (proxy via train): {valid_acc.item():.4f}")
-
+        valid_acc, valid_obj = infer(valid_queue, model, criterion)
+        # logging.info(f"[INFO] valid_acc {valid_acc:.4f}")
+        logging.info(f"[INFO] valid_acc {valid_acc.item():.4f}")
         writer.add_scalar("valid_acc", valid_acc, epoch + 1)
         writer.add_scalar("valid_obj", valid_obj, epoch + 1)
         writer.add_scalar("test_error", 100 - valid_acc, epoch + 1)
@@ -239,6 +217,7 @@ def main():
         if valid_acc > best_acc_top1:
             ut.save(model, os.path.join(args.save, "best_weights.pt"))
             best_acc_top1 = valid_acc
+            # logging.info(f"[INFO] New best model saved with acc {best_acc_top1:.4f}")
             logging.info(
                 f"[INFO] New best model saved with acc {best_acc_top1.item():.4f}"
             )
@@ -253,9 +232,9 @@ def main():
     emissions = tracker.stop()
     logging.info(f"[INFO] Estimated emissions (kg CO₂): {emissions:.5f}")
     logging.info(
-        f"best_acc: {best_acc_top1.item():.4f}, final_acc: {valid_acc.item():.4f}"
+        f"best_acc: {best_acc_top1.item():.4f}, valid_acc: {valid_acc.item():.4f}"
     )
-    print(f"best_acc: {best_acc_top1.item():.4f}, final_acc: {valid_acc.item():.4f}")
+    print(f"best_acc: {best_acc_top1.item():.4f}, valid_acc: {valid_acc.item():.4f}")
 
     with open(os.path.join(args.save, "test_error.pickle"), "wb") as f:
         pickle.dump(test_error, f)
@@ -294,7 +273,6 @@ def train(train_queue, model, criterion, optimizer):
 
 
 def infer(valid_queue, model, criterion):
-    # This function is no longer called in the main loop but kept for compatibility
     objs = ut.AvgrageMeter()
     top1 = ut.AvgrageMeter()
     top5 = ut.AvgrageMeter()
