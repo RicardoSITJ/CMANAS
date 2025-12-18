@@ -122,7 +122,7 @@ def main():
     criterion = nn.CrossEntropyLoss(label_smoothing=0.1).cuda()
     optimizer = torch.optim.AdamW(
         model.parameters(),
-        lr=1e-4,  # Lower LR is safer for small datasets to prevent "jitter"
+        lr=3e-4,  # Lower LR is safer for small datasets to prevent "jitter"
         weight_decay=0.05,  # Slightly higher weight decay helps prevent overfitting
         amsgrad=False,  # Set to True only if you see divergent behavior
     )
