@@ -124,7 +124,7 @@ def main():
         model.parameters(),
         lr=3e-4,  # Lower LR is safer for small datasets to prevent "jitter"
         weight_decay=0.05,  # Slightly higher weight decay helps prevent overfitting
-        amsgrad=False,  # Set to True only if you see divergent behavior
+        amsgrad=True,  # Set to True only if you see divergent behavior
     )
 
     # ============================
@@ -169,7 +169,7 @@ def main():
     )
 
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, float(args.epochs)
+        optimizer, T_max=float(args.epochs), eta_min=1e-4
     )
 
     test_error = []
