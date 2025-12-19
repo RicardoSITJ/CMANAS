@@ -328,7 +328,7 @@ def main(args):
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=3e-4,  # Lower LR is safer for small datasets to prevent "jitter"
-        weight_decay=0.1,  # Slightly higher weight decay helps prevent overfitting
+        weight_decay=0.05,  # Slightly higher weight decay helps prevent overfitting
         amsgrad=True,  # Set to True only if you see divergent behavior
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
