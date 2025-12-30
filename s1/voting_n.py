@@ -41,7 +41,6 @@ parser.add_argument("--cutout", action="store_true", default=False)
 parser.add_argument("--cutout_length", type=int, default=16)
 parser.add_argument("--drop_path_prob", type=float, default=0.2)
 
-# ⭐ NEW: list of model paths
 parser.add_argument(
     "--model_paths",
     nargs="+",
@@ -62,10 +61,9 @@ CIFAR_CLASSES = 7
 
 
 # ---------------------------------------------------------------------
-#   N-MODEL SOFT VOTING
+#   N-MODEL SOFT VOTING WITH FPS, PARAMS, AND DISK SIZE
 # ---------------------------------------------------------------------
 def infer_voting(test_queue, models, criterion):
-
     for m in models:
         m.eval()
 
@@ -74,6 +72,15 @@ def infer_voting(test_queue, models, criterion):
 
     all_preds = []
     all_targets = []
+
+    total_images = len(test_queue.dataset)
+
+    # --- Setup Timing ---
+    torch.cuda.synchronize()
+    start_event = torch.cuda.Event(enable_timing=True)
+    end_event = torch.cuda.Event(enable_timing=True)
+
+    start_event.record()  # Start Timer
 
     with torch.no_grad():
         for step, (inp, target) in enumerate(test_queue):
@@ -87,7 +94,7 @@ def infer_voting(test_queue, models, criterion):
                 logits, _ = model(inp)
                 logits_list.append(logits)
 
-            # ⭐ SOFT VOTING: average all logits
+            # SOFT VOTING: average all logits
             logits = sum(logits_list) / float(len(logits_list))
 
             preds = torch.argmax(logits, dim=1)
@@ -104,10 +111,32 @@ def infer_voting(test_queue, models, criterion):
             if step % args.report_freq == 0:
                 logging.info("test %03d %e %f", step, objs.avg, top1.avg)
 
+    # --- Stop Timing ---
+    end_event.record()
+    torch.cuda.synchronize()
+
+    # Calculate FPS
+    run_time_ms = start_event.elapsed_time(end_event)
+    run_time_sec = run_time_ms / 1000.0
+    fps = total_images / run_time_sec
+
+    # --- Calculate Model Size Stats (Ensemble Total) ---
+    # 1. Theoretical Parameter Size in MB
+    total_params_mb = sum(ut.count_parameters_in_MB(m) for m in models)
+
+    # 2. Actual Disk Space in MB (Sum of all loaded .pt files)
+    total_disk_mb = 0.0
+    for path in args.model_paths:
+        if os.path.exists(path):
+            # os.path.getsize returns bytes, divide by 1024*1024 for MB
+            total_disk_mb += os.path.getsize(path) / (1024.0 * 1024.0)
+
     print(f"\n[VOTING] Final Accuracy: {top1.avg:.2f} | Loss: {objs.avg:.4f}")
+    print(f"[TIMING] Time: {run_time_sec:.3f}s | FPS: {fps:.2f}")
+    print(f"[SIZE]   Params: {total_params_mb:.2f} MB | Disk: {total_disk_mb:.2f} MB")
 
     # -------------------------
-    # Save preds + targets
+    # Save preds + targets + FPS + Sizes
     # -------------------------
     run_ids = [
         os.path.basename(os.path.dirname(p)).replace("eval-EXP-", "")
@@ -117,12 +146,24 @@ def infer_voting(test_queue, models, criterion):
     out_name = f"voting_{len(models)}_preds_targets_" + "_".join(run_ids) + ".pkl"
     out_path = os.path.join(args.dir if args.dir else ".", out_name)
 
+    # ⭐ UPDATED PICKLE DUMP
+    save_dict = {
+        "preds": all_preds,
+        "targets": all_targets,
+        "fps": fps,
+        "total_time_sec": run_time_sec,
+        "acc": top1.avg,
+        "loss": objs.avg,
+        "params_mb": total_params_mb,  # Total theoretical size
+        "disk_mb": total_disk_mb,  # Total file size on disk
+    }
+
     with open(out_path, "wb") as f:
-        pickle.dump({"preds": all_preds, "targets": all_targets}, f)
+        pickle.dump(save_dict, f)
 
-    print(f"[INFO] Saved predictions + targets → {out_path}")
+    print(f"[INFO] Saved predictions + stats → {out_path}")
 
-    return top1.avg, objs.avg
+    return top1.avg, objs.avg, fps
 
 
 # ---------------------------------------------------------------------
@@ -134,7 +175,6 @@ def main():
 
     logging.info(f"Setting Global Seed: {args.seed}")
     seed_everything(args.seed)
-    # This ensures the DataLoader shuffle is isolated from other random calls
     g = torch.Generator()
     g.manual_seed(args.seed)
     torch.cuda.set_device(args.gpu)
@@ -183,11 +223,12 @@ def main():
         generator=g,
     )
 
-    # Run ensemble voting
-    test_acc, test_loss = infer_voting(test_queue, models, criterion)
+    # Run ensemble voting with timing
+    test_acc, test_loss, test_fps = infer_voting(test_queue, models, criterion)
 
     logging.info("FINAL VOTING ACC %f", test_acc)
     print(f"FINAL VOTING ACC {test_acc}")
+    print(f"FINAL FPS {test_fps:.2f}")
 
 
 if __name__ == "__main__":
