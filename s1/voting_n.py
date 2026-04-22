@@ -40,7 +40,7 @@ parser.add_argument("--auxiliary", action="store_true", default=False)
 parser.add_argument("--cutout", action="store_true", default=False)
 parser.add_argument("--cutout_length", type=int, default=16)
 parser.add_argument("--drop_path_prob", type=float, default=0.2)
-
+parser.add_argument("--num_classes", type=int, default=7, help="number of output classes")
 parser.add_argument(
     "--model_paths",
     nargs="+",
@@ -56,8 +56,6 @@ if args.log_path is not None:
     fh = logging.FileHandler(os.path.join(args.log_path, "evaluate.txt"))
     fh.setFormatter(logging.Formatter(log_format))
     logging.getLogger().addHandler(fh)
-
-CIFAR_CLASSES = 7
 
 
 # ---------------------------------------------------------------------
@@ -196,7 +194,7 @@ def main():
     models = []
     for model_path in args.model_paths:
         m = Network(
-            args.init_channels, CIFAR_CLASSES, args.layers, args.auxiliary, genotype
+            args.init_channels, args.num_classes, args.layers, args.auxiliary, genotype
         )
         ut.load(m, model_path, args.gpu)
         m = m.cuda()
