@@ -262,9 +262,29 @@ def save(model, model_path):
 
 
 def load(model, model_path, gpu=0):
-    model.load_state_dict(
-        torch.load(model_path, map_location="cuda:{}".format(gpu)), strict=False
-    )
+    device = f"cuda:{gpu}" if torch.cuda.is_available() else "cpu"
+    state_dict = torch.load(model_path, map_location=device)
+    
+    # Handle cases where the state_dict is nested inside a checkpoint dictionary
+    if isinstance(state_dict, dict) and 'state_dict' in state_dict:
+        state_dict = state_dict['state_dict']
+
+    model_dict = model.state_dict()
+    
+    # Check for classifier mismatch
+    if 'classifier.weight' in state_dict and 'classifier.weight' in model_dict:
+        checkpoint_shape = state_dict['classifier.weight'].shape
+        current_model_shape = model_dict['classifier.weight'].shape
+        
+        if checkpoint_shape != current_model_shape:
+            print(f"⚠️ Shape mismatch: Checkpoint has {checkpoint_shape[0]} classes, "
+                  f"but model has {current_model_shape[0]}. Dropping classifier weights.")
+            state_dict.pop('classifier.weight', None)
+            state_dict.pop('classifier.bias', None)
+        else:
+            print(f"✅ Dimensions match ({current_model_shape[0]} classes). Loading full state_dict.")
+
+    model.load_state_dict(state_dict, strict=False)
 
 
 def drop_path(x, drop_prob):
