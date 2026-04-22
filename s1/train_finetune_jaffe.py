@@ -51,6 +51,7 @@ parser.add_argument("--save", type=str, default="EXP")
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--arch", type=str, default="DARTS")
 parser.add_argument("--grad_clip", type=float, default=5)
+parser.add_argument("--num_classes", type=int, default=7, help="number of output classes")
 parser.add_argument(
     "--finetune",
     type=lambda x: x.lower() == "true",
@@ -83,7 +84,6 @@ logging.info(
     f"[INFO] torch version: {torch.__version__}, torchvision version: {torchvision.__version__}"
 )
 
-CIFAR_CLASSES = 7
 writer = SummaryWriter(os.path.join(args.save, "runs"))
 
 
@@ -115,7 +115,7 @@ def main():
 
     # Model setup
     model = Network(
-        args.init_channels, CIFAR_CLASSES, args.layers, args.auxiliary, genotype
+        args.init_channels, args.num_classes, args.layers, args.auxiliary, genotype
     ).cuda()
     logging.info("param size = %fMB", ut.count_parameters_in_MB(model))
 
