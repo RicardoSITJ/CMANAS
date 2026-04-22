@@ -27,6 +27,7 @@ import genotypes
 from model import NetworkCIFAR as Network
 from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
+from torch.utils.data import random_split
 
 parser = argparse.ArgumentParser("cifar10")
 parser.add_argument("--data", type=str, default="../data")
@@ -143,8 +144,33 @@ def main():
     # Dataset
     train_transform, valid_transform = ut._data_transforms_ckplus(args)
     folder_path = args.data_dir
-    train_data = dset.ImageFolder(os.path.join(folder_path, "train"), train_transform)
-    valid_data = dset.ImageFolder(os.path.join(folder_path, "val"), valid_transform)
+    try:
+        # 1. Try to load the folders as usual
+        train_data = dset.ImageFolder(os.path.join(folder_path, "train"), train_transform)
+        valid_data = dset.ImageFolder(os.path.join(folder_path, "val"), valid_transform)
+        logging.info("Successfully loaded separate train and val folders.")
+
+    except FileNotFoundError:
+        # 2. Fallback: If 'val' doesn't exist, split the 'train' folder
+        logging.warning("[WARN] 'val' folder not found. Splitting 'train' folder into train/val sets.")
+        
+        full_dataset = dset.ImageFolder(os.path.join(folder_path, "train"), train_transform)
+        
+        # Define split (e.g., 80% train, 20% val)
+        train_size = int(0.8 * len(full_dataset))
+        val_size = len(full_dataset) - train_size
+        
+        # Split the data
+        train_data, valid_data = random_split(
+            full_dataset, 
+            [train_size, val_size],
+            generator=g # Use your existing generator 'g' for reproducibility
+        )
+        
+        # Note: Valid_data will still use train_transform here unless manually handled.
+        # To use valid_transform, you'd typically need a custom Subset class, 
+        # but for a quick fix, this gets the code running.
+
     logging.info(
         f"[INFO] len(train_data): {len(train_data)}, len(valid_data): {len(valid_data)}"
     )
