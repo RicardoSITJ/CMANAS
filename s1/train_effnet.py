@@ -86,14 +86,14 @@ def main():
 
     # --- Transforms con Resize a 224 para EfficientNet ---
     train_transform = transforms.Compose([
-        transforms.Resize(224),
+        transforms.Resize(48),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
     
     valid_transform = transforms.Compose([
-        transforms.Resize(224),
+        transforms.Resize(48),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
