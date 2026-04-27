@@ -2,33 +2,34 @@ import sys
 import os
 from types import ModuleType
 
-# 1. Bypass the genotypes error
+# --- STEP 1: Fix the 'genotypes' error without editing ut.py ---
+# This creates a dummy module in memory so 'import ut' doesn't fail
 fake_genotypes = ModuleType('genotypes')
 sys.modules['genotypes'] = fake_genotypes
 
 import os.path as osp
 import numpy as np
 import torch
-import ut
-import logging
-import argparse
 import torch.nn as nn
 import torch.utils
-import torch.backends.cudnn as cudnn # Fix for your Traceback
+import torch.backends.cudnn as cudnn  # FIXED: torch, not torchvision
 import torchvision.datasets as dset
-import torchvision.backends.cudnn as cudnn
-import torchvision.models as models  # Added torchvision models
+import torchvision.models as models
+import torchvision.transforms as transforms
 from torch.autograd import Variable
 
-# from model import NetworkCIFAR as Network  # No longer needed for EfficientNet
+# Now we can safely import ut
+import ut
+
+import argparse
+import logging
 
 parser = argparse.ArgumentParser("cifar")
 parser.add_argument("--data", type=str, default="../data", help="location of the data corpus")
 parser.add_argument("--batch_size", type=int, default=1024, help="batch size")
 parser.add_argument("--report_freq", type=float, default=50, help="report frequency")
 parser.add_argument("--gpu", type=int, default=0, help="gpu device id")
-parser.add_argument("--model_path", type=str, default=None, help="path of pretrained weights (optional)")
-parser.add_argument("--log_path", type=str, default=None, help="path of log file")
+parser.add_argument("--model_path", type=str, default=None, help="path of pretrained model")
 parser.add_argument("--seed", type=int, default=0, help="random seed")
 args = parser.parse_args()
 
@@ -47,32 +48,35 @@ def main():
     cudnn.benchmark = True
     torch.manual_seed(args.seed)
     cudnn.enabled = True
-    torch.cuda.manual_seed(args.seed)
-
-    logging.info("gpu device = %d" % args.gpu)
-    logging.info("args = %s", args)
-
-    # --- Initialize EfficientNet-B0 ---
-    logging.info("Initializing EfficientNet-B0")
-    # Set weights=None for training from scratch, or weights='DEFAULT' for ImageNet pre-training
-    model = models.efficientnet_b0(weights=None) 
     
-    # Adjust the final fully connected layer for 7 classes
+    logging.info("gpu device = %d" % args.gpu)
+
+    # --- STEP 2: Initialize EfficientNet-B0 ---
+    # We use weights=None because you are likely loading your own .pt file
+    model = models.efficientnet_b0(weights=None)
+    
+    # Adjust the classifier for CK+ (7 classes)
     num_ftrs = model.classifier[1].in_features
     model.classifier[1] = nn.Linear(num_ftrs, CIFAR_CLASSES)
 
-    # Load weights if path is provided
     if args.model_path:
+        # Using the utility load function from your project
         ut.load(model, args.model_path, args.gpu)
-        logging.info(f"Loaded model from {args.model_path}")
-
+    
     model = model.cuda()
 
     logging.info("param size = %fMB", ut.count_parameters_in_MB(model))
 
     criterion = nn.CrossEntropyLoss().cuda()
 
-    _, test_transform = ut._data_transforms_ckplus(args)
+    # --- STEP 3: Handle the 48x48 resolution ---
+    # We define the transform here to ensure it resizes to 224 for EfficientNet
+    test_transform = transforms.Compose([
+        transforms.Resize(224), 
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+
     folder_path = "/kaggle/working/CMANAS/datasets/ckplus_split/7_class"
     test_data = dset.ImageFolder(osp.join(folder_path, "test"), test_transform)
 
@@ -81,7 +85,7 @@ def main():
         batch_size=args.batch_size,
         shuffle=False,
         pin_memory=True,
-        num_workers=4, # Increased for efficiency
+        num_workers=2,
     )
 
     test_acc, test_obj = infer(test_queue, model, criterion)
@@ -100,13 +104,12 @@ def infer(test_queue, model, criterion):
             input = input.cuda()
             target = target.cuda()
 
-            # EfficientNet returns only logits, unlike the previous DARTS model
+            # Standard EfficientNet returns a single tensor (logits)
             logits = model(input)
             loss = criterion(logits, target)
 
-            # Note: topk=(1, 2) used because CIFAR_CLASSES is small. 
-            # If classes < 5, topk=5 will crash.
-            prec1, prec5 = ut.accuracy(logits, target, topk=(1, 2)) 
+            # Using accuracy from your ut.py
+            prec1, prec5 = ut.accuracy(logits, target, topk=(1, 2))
             
             n = input.size(0)
             objs.update(loss.item(), n)
@@ -117,7 +120,6 @@ def infer(test_queue, model, criterion):
                 logging.info("test %03d %e %f %f", step, objs.avg, top1.avg, top5.avg)
 
     return top1.avg, objs.avg
-
 
 if __name__ == "__main__":
     main()
