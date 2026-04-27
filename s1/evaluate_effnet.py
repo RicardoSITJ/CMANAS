@@ -72,7 +72,7 @@ def main():
     # --- STEP 3: Handle the 48x48 resolution ---
     # We define the transform here to ensure it resizes to 224 for EfficientNet
     test_transform = transforms.Compose([
-        transforms.Resize(224), 
+        transforms.Resize(48), 
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
