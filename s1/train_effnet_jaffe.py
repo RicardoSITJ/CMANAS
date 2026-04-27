@@ -1,10 +1,5 @@
 import os
 import sys
-
-# Must be set before any torch/cuda imports
-os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
-
-sys.path.insert(0, "./")
 import time
 import glob
 import random
@@ -30,6 +25,22 @@ from types import ModuleType
 fake_genotypes = ModuleType('genotypes')
 sys.modules['genotypes'] = fake_genotypes
 import ut 
+
+# Implementación interna de procedures para evitar ModuleNotFoundError
+def seed_everything(seed):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
 
 parser = argparse.ArgumentParser("efficientnet_b0_train")
 parser.add_argument("--data_dir", type=str, required=True, help="path of data")
