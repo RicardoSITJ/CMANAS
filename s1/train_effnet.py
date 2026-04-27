@@ -1,5 +1,10 @@
 import os
 import sys
+
+# Must be set before any torch/cuda imports
+os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+
+sys.path.insert(0, "./")
 import time
 import glob
 import numpy as np
