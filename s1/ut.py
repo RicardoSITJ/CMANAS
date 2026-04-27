@@ -6,7 +6,11 @@ import torchvision.transforms as transforms
 from torch.autograd import Variable
 import torch.nn as nn
 import pickle
-import genotypes
+# import genotypes
+try:
+    import genotypes
+except ImportError:
+    pass
 import torch.nn.functional as F
 
 
