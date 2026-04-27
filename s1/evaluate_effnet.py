@@ -1,5 +1,11 @@
 import sys
 import os
+from types import ModuleType
+
+# 1. Bypass the genotypes error
+fake_genotypes = ModuleType('genotypes')
+sys.modules['genotypes'] = fake_genotypes
+
 import os.path as osp
 import numpy as np
 import torch
@@ -8,6 +14,7 @@ import logging
 import argparse
 import torch.nn as nn
 import torch.utils
+import torch.backends.cudnn as cudnn # Fix for your Traceback
 import torchvision.datasets as dset
 import torchvision.backends.cudnn as cudnn
 import torchvision.models as models  # Added torchvision models
