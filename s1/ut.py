@@ -131,7 +131,7 @@ def _data_transforms_ckplus(args):
     # If your model architecture specifically requires 32x32 input, change this back to 32.
     # IMG_SIZE = 48
     # IMG_SIZE = 48
-    IMG_SIZE = 254
+    IMG_SIZE = 224
 
     train_transform = transforms.Compose(
         [
