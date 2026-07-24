@@ -7,7 +7,8 @@ _SIGMA_MAX = 1e32
 
 class CMAES:
   '''CMA-ES algorithm'''
-  def __init__(self, mean, sigma, bounds = None, n_max_resampling = 100, seed = 18, population_size=None):
+  def __init__(self, mean, sigma, bounds = None, n_max_resampling = 100, seed = 18, population_size=None,
+               multi_objective = False, obj_directions = None):
     assert sigma > 0, "sigma must be non-zero positive value"
     n_dim = len(mean)
     if population_size is None:
@@ -111,6 +112,13 @@ class CMAES:
     self.eigen_eval = 0
     self._n_max_resampling = n_max_resampling
 
+    # EMU: multi-objective (Pareto) selection. When enabled, tell() interprets each
+    # solution's fitness as an objective vector and ranks the population by Pareto
+    # non-dominance + crowding distance (NSGA-II style) instead of a scalar sort.
+    # obj_directions: per-objective +1 (maximize) / -1 (minimize); default all maximize.
+    self._multi_objective = multi_objective
+    self._obj_directions = None if obj_directions is None else np.asarray(obj_directions, dtype=np.float64)
+
     # Termination criteria (page 33)
     self._tolconditioncov = 1e14  # Indicating condition number of covariance matrix exceeds tolerance
     self._tolxup = 1e4  # Indicating too small sigma or divergent behavior
@@ -194,28 +202,107 @@ class CMAES:
     x = self.repair_infeasible_params(x)
     return x
   
+  # ---- EMU: multi-objective (Pareto) ranking helpers ----
+  @staticmethod
+  def _dominates(a, b, dirs):
+    '''True if objective vector a Pareto-dominates b. dirs: +1 maximize, -1 minimize.'''
+    a = a * dirs
+    b = b * dirs
+    return bool(np.all(a >= b) and np.any(a > b))
+
+  def _fast_non_dominated_sort(self, objs, dirs):
+    '''NSGA-II fast non-dominated sort. Returns a list of fronts (each a list of indices).'''
+    n = len(objs)
+    dominated = [[] for _ in range(n)]      # solutions dominated by i
+    n_dom = np.zeros(n, dtype=int)          # number of solutions that dominate i
+    fronts = [[]]
+    for p in range(n):
+      for q in range(n):
+        if p == q:
+          continue
+        if self._dominates(objs[p], objs[q], dirs):
+          dominated[p].append(q)
+        elif self._dominates(objs[q], objs[p], dirs):
+          n_dom[p] += 1
+      if n_dom[p] == 0:
+        fronts[0].append(p)
+    i = 0
+    while fronts[i]:
+      nxt = []
+      for p in fronts[i]:
+        for q in dominated[p]:
+          n_dom[q] -= 1
+          if n_dom[q] == 0:
+            nxt.append(q)
+      i += 1
+      fronts.append(nxt)
+    return fronts[:-1]  # drop the trailing empty front
+
+  @staticmethod
+  def _crowding_distance(objs, idxs, dirs):
+    '''NSGA-II crowding distance for the indices of one front. Returns {idx: distance}.'''
+    m = objs.shape[1]
+    dist = {i: 0.0 for i in idxs}
+    if len(idxs) <= 2:
+      for i in idxs:
+        dist[i] = float('inf')
+      return dist
+    for k in range(m):
+      order = sorted(idxs, key=lambda i: objs[i, k])
+      dist[order[0]] = float('inf')
+      dist[order[-1]] = float('inf')
+      span = objs[order[-1], k] - objs[order[0], k]
+      if span <= 0:
+        continue
+      for j in range(1, len(order) - 1):
+        dist[order[j]] += (objs[order[j + 1], k] - objs[order[j - 1], k]) / span
+    return dist
+
+  def _pareto_rank_order(self, objs, dirs):
+    '''Global order best->worst by (front rank asc, crowding distance desc).'''
+    fronts = self._fast_non_dominated_sort(objs, dirs)
+    order = []
+    for front in fronts:
+      cd = self._crowding_distance(objs, front, dirs)
+      order.extend(sorted(front, key=lambda i: cd[i], reverse=True))
+    return order
+
   # FUNCTIONS FOR UPDATING
   def tell(self, solutions):
     '''
       Function to update the parameters of the distribution
-      Tell evaluation values
-      solutions = list : [x: np.ndarray, fitness_value: float]
+      Tell evaluation values.
+      Single-objective: solutions = list of (x: np.ndarray, fitness_value: float).
+      Multi-objective (EMU): solutions = list of (x: np.ndarray, objectives: np.ndarray),
+        ranked by Pareto non-dominance + crowding distance instead of a scalar sort.
     '''
     if len(solutions) != self._population_size:
       raise ValueError("Must tell popsize-length solutions.")
-    
+
     #B, D = self._B, self._D
-    
+
     self._g += 1
 
-    # SORTING THE SOLUTIONS
-    solutions.sort(key=lambda s: s[1], reverse = True) # sorting in descending order for maximization
-    print([sol[1] for sol in solutions])
+    # SORTING THE SOLUTIONS (best -> worst; the recombination below is rank-based)
+    if self._multi_objective:
+      objs = np.array([np.asarray(s[1], dtype=np.float64) for s in solutions])
+      dirs = self._obj_directions if self._obj_directions is not None else np.ones(objs.shape[1])
+      order = self._pareto_rank_order(objs, dirs)
+      solutions = [solutions[i] for i in order]
+      # funhist (TolFun): use the primary objective (index 0) of the best/worst ranked solution.
+      best_val = float(np.asarray(solutions[0][1])[0])
+      worst_val = float(np.asarray(solutions[-1][1])[0])
+      print([tuple(np.asarray(s[1]).tolist()) for s in solutions])
+    else:
+      solutions.sort(key=lambda s: s[1], reverse = True) # sorting in descending order for maximization
+      best_val = solutions[0][1]
+      worst_val = solutions[-1][1]
+      print([sol[1] for sol in solutions])
 
     # Stores 'best' and 'worst' values of the last 'self._funhist_term' generations.
     funhist_idx = 2 * (self.generation % self._funhist_term)
-    self._funhist_values[funhist_idx] = solutions[0][1]
-    self._funhist_values[funhist_idx + 1] = solutions[-1][1]
+    self._funhist_values[funhist_idx] = best_val
+    self._funhist_values[funhist_idx + 1] = worst_val
     
     # Sample new population of search_points, for k=1, ..., popsize
     B, D = self.eigen_decomposition()

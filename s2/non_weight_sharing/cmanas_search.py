@@ -37,6 +37,8 @@ parser.add_argument('--record_filename', type = str, default = None, help = 'fil
 parser.add_argument('--report_freq', type = float, default = 50, help = 'report frequency')
 parser.add_argument('--seed', type = int, default=-1, help = 'random seed')
 parser.add_argument('--track_running_stats', action = 'store_true', default = False, help = 'use track_running_stats in BN layer')
+# EMU: multi-objective (Pareto) selection over (accuracy, FLOPs, params). Off -> original single-objective CMANAS.
+parser.add_argument('--multi_objective', action = 'store_true', default = False, help = 'EMU: Pareto selection over accuracy/FLOPs/params (default: single-objective accuracy)')
 args = parser.parse_args()
 
 datasets = ['cifar10', 'cifar100', 'ImageNet16-120']
@@ -63,6 +65,35 @@ def get_arch_score(api, arch_str, dataset, acc_type=None, use_012_epoch_training
     return valid_acc, time_cost
   else:
     return api.query_by_index(arch_index=arch_index, hp = '200').get_metrics(dataset, acc_type)['accuracy']
+
+def get_arch_cost(api, arch_str, dataset):
+  # EMU (EXP-002): extra objectives free from the NB201 oracle -> (flops, params, latency).
+  # get_cost_info uses the plain dataset name (e.g. 'cifar10', not 'cifar10-valid').
+  arch_index = api.query_index_by_arch(arch_str)
+  info = api.get_cost_info(arch_index, dataset)
+  return info.get('flops'), info.get('params'), info.get('latency')
+
+def pareto_front(arch_df):
+  # EMU (EXP-003): non-dominated set over (arch_score up, flops down, params down) = the search
+  # objective. Keeps all columns (test_acc/valid_acc/flops/params) so hypervolume can be recomputed
+  # offline on any accuracy axis. arch_score is the h12 valid accuracy used as the selection signal.
+  df = arch_df.dropna(subset=['arch_score', 'flops', 'params']).reset_index(drop=True)
+  if df.empty:
+    return df
+  obj = df[['arch_score', 'flops', 'params']].to_numpy(dtype=float) * np.array([1.0, -1.0, -1.0])
+  n = len(obj)
+  keep = np.ones(n, dtype=bool)
+  for i in range(n):
+    if not keep[i]:
+      continue
+    for j in range(n):
+      if i == j:
+        continue
+      # j dominates i ?
+      if np.all(obj[j] >= obj[i]) and np.any(obj[j] > obj[i]):
+        keep[i] = False
+        break
+  return df[keep].sort_values('arch_score', ascending=False).reset_index(drop=True)
 
 def main(args, api):
   # Configuring the logger
@@ -109,15 +140,18 @@ def main(args, api):
   tmp = (arch_str, test_acc, valid_acc)
   best_arch_per_epoch.append(tmp)
 
+  # EMU: obj_directions for (valid_acc, flops, params) = maximize acc, minimize flops & params.
   cmaes_optimizer = CMAES(mean=np.zeros(args.edges * len(NAS_BENCH_201), dtype=np.float64), sigma=1.3,
-                          bounds = None, seed = args.seed, n_max_resampling=100, population_size = args.pop_size)
+                          bounds = None, seed = args.seed, n_max_resampling=100, population_size = args.pop_size,
+                          multi_objective = args.multi_objective, obj_directions = [1, -1, -1])
   
   mean_list, cov_list = [], []
   mean_list.append(cmaes_optimizer._mean.copy())
   cov_list.append(cmaes_optimizer._C.copy())
   logging.info(f'[INFO] mean {mean_list[-1]}, covariance: {cov_list[-1]}')
   
-  arch_df = pd.DataFrame(columns=['genotype', 'generation', 'test_acc', 'valid_acc', 'arch', 'arch_score', 'time_cost'])
+  # EMU (EXP-002): flops/params/latency columns for the multi-objective AF-table (free from NB201).
+  arch_df = pd.DataFrame(columns=['genotype', 'generation', 'test_acc', 'valid_acc', 'arch', 'arch_score', 'time_cost', 'flops', 'params', 'latency'])
 
   total_epochs = args.epochs
   epoch_start = time.time()
@@ -145,6 +179,7 @@ def main(args, api):
         row = arch_df[ arch_df['genotype']==arch_str ]
         valid_acc, time_cost = row['arch_score'].values[0], row['time_cost'].values[0]
         test_acc_tmp, valid_acc_tmp = row['test_acc'].values[0], row['valid_acc'].values[0]
+        flops, params, latency = row['flops'].values[0], row['params'].values[0], row['latency'].values[0]
       else:
         if args.dataset == 'cifar10':
           valid_acc, time_cost = get_arch_score(api=api, arch_str=arch_str, dataset='cifar10-valid', use_012_epoch_training=True)
@@ -154,15 +189,22 @@ def main(args, api):
           valid_acc, time_cost = get_arch_score(api=api, arch_str=arch_str, dataset=args.dataset, use_012_epoch_training=True)
           test_acc_tmp = get_arch_score(api=api, arch_str=arch_str, dataset=args.dataset, acc_type=acc_type, use_012_epoch_training=False)
           valid_acc_tmp = get_arch_score(api=api, arch_str=arch_str, dataset=args.dataset, acc_type=val_acc_type, use_012_epoch_training=False)
-      
-      logging.info(f'[INFO] Evaluating ({ind+1:03d}/{cmaes_optimizer.population_size:03d}) valid_acc: {valid_acc:.5f} finished in {(time.time()-ind_start):.5f} seconds')
-      solutions.append((x, valid_acc))
-      
+        # EMU (EXP-002): FLOPs/params/latency free from the NB201 oracle.
+        flops, params, latency = get_arch_cost(api=api, arch_str=arch_str, dataset=args.dataset)
+
+      logging.info(f'[INFO] Evaluating ({ind+1:03d}/{cmaes_optimizer.population_size:03d}) valid_acc: {valid_acc:.5f} flops: {flops} params: {params} finished in {(time.time()-ind_start):.5f} seconds')
+      # EMU (EXP-003): multi-objective fitness = (valid_acc, flops, params); else scalar accuracy.
+      if args.multi_objective:
+        solutions.append((x, np.array([valid_acc, flops, params], dtype=np.float64)))
+      else:
+        solutions.append((x, valid_acc))
+
       # Updating the main dataframe
       if ( arch_df[ arch_df['genotype']==arch_str ].empty ):
         d_tmp = {'genotype':arch_str,'generation':epoch+1,'arch_score':valid_acc,'test_acc':test_acc_tmp,
-                 'valid_acc':valid_acc_tmp,'arch':x.copy(), 'time_cost': time_cost}
-        arch_df = arch_df.append(d_tmp, ignore_index=True)
+                 'valid_acc':valid_acc_tmp,'arch':x.copy(), 'time_cost': time_cost,
+                 'flops': flops, 'params': params, 'latency': latency}
+        arch_df = pd.concat([arch_df, pd.DataFrame([d_tmp])], ignore_index=True)
       
     logging.info('[INFO] Epoch ({}/{})Evaluation finished in {:.5f} seconds'.format(epoch + 1, total_epochs, (time.time()-eval_start)))
 
@@ -194,13 +236,15 @@ def main(args, api):
       valid_acc = get_arch_score(api=api, arch_str=arch_str, dataset=args.dataset, acc_type=val_acc_type, use_012_epoch_training=False)
     tmp = (arch_str, test_acc, valid_acc)
     best_arch_per_epoch.append(tmp)
-    logging.info(f'[INFO] Architecture: {arch_str} with test accuracy: {test_acc:.3f} and validation accuracy: {valid_acc:.3f}')
-    
+    flops_m, params_m, latency_m = get_arch_cost(api=api, arch_str=arch_str, dataset=args.dataset)
+    logging.info(f'[INFO] Architecture: {arch_str} with test accuracy: {test_acc:.3f} and validation accuracy: {valid_acc:.3f} (flops {flops_m}, params {params_m})')
+
     # Updating the main dataframe
     if ( arch_df[ arch_df['genotype']==arch_str ].empty ):
       d_tmp = {'genotype':arch_str,'generation':epoch+1,'arch_score':valid_acc_h12,'test_acc':test_acc,
-               'valid_acc':valid_acc,'arch':x_mean.copy(), 'time_cost': time_cost}
-      arch_df = arch_df.append(d_tmp, ignore_index=True)
+               'valid_acc':valid_acc,'arch':x_mean.copy(), 'time_cost': time_cost,
+               'flops': flops_m, 'params': params_m, 'latency': latency_m}
+      arch_df = pd.concat([arch_df, pd.DataFrame([d_tmp])], ignore_index=True)
    
     logging.info(f'[INFO] length main dataframe: {len(arch_df)}, solutions: {len(solutions)}')
     
@@ -210,12 +254,19 @@ def main(args, api):
   
   logging.info(f'[INFO] Best Architecture after the search: {best_arch_per_epoch[-1]}')
   logging.info(f'length best_arch_per_epoch: {len(best_arch_per_epoch)}')
-  
+
+  # EMU (EXP-002/003): dump the multi-objective AF-table and the Pareto front of this run.
+  # Front = non-dominated set over (valid_acc up, flops down, params down); the real EMU deliverable
+  # (hypervolume is computed offline). base already ends in '.csv' (set in __main__).
+  base = args.record_filename[:-4] if args.record_filename.endswith('.csv') else args.record_filename
+  arch_df.to_csv(f'{base}-archdf-run{args.run}.csv', index=False)
+  front = pareto_front(arch_df)
+  front.to_csv(f'{base}-front-run{args.run}.csv', index=False)
+  logging.info(f'[INFO] Pareto front (run {args.run}): {len(front)} architectures over {len(arch_df)} evaluated')
 
   tmp_a = {'run': args.run, 'valid': best_arch_per_epoch[-1][2], 'test': best_arch_per_epoch[-1][1], 'time': time.time()-epoch_start}
-  
-  df = pd.DataFrame()
-  df = df.append(tmp_a, ignore_index=True)
+
+  df = pd.DataFrame([tmp_a])
   df = df.set_index('run')
   if args.run == 1:
     df.to_csv(args.record_filename, mode='a')
