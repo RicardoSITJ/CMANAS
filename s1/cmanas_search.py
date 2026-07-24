@@ -40,6 +40,7 @@ from procedures import (
 )
 from procedures import get_optim_scheduler
 from model_search import Network
+from model import NetworkCIFAR                       # EMU: red discreta para medir FLOPs/params
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 from utils import (
@@ -116,6 +117,11 @@ parser.add_argument("--weight_decay", type=float, default=3e-4, help="weight dec
 parser.add_argument(
     "--workers", type=int, default=2, help="number of data loading workers (default: 2)"
 )
+# EMU (EXP-006): selección Pareto multi-objetivo (accuracy proxy OSM ↑, FLOPs ↓, params ↓).
+parser.add_argument(
+    "--multi_objective", action="store_true", default=False,
+    help="EMU: Pareto selection over (proxy-acc, FLOPs, params) instead of single-objective accuracy",
+)
 args = parser.parse_args()
 if args.seed is None or args.seed < 0:
     args.seed = random.randint(1, 100000)
@@ -143,6 +149,41 @@ logging.info(
     f"[INFO] torch version {torch.__version__}, torchvision version: {torchvision.__version__}"
 )
 logging.info(f"[INFO] {args}")
+
+
+# EMU (EXP-006): fijados en main() tras cargar el dataset; usados por measure_cost dentro de evaluate().
+_NUM_CLASSES = None
+_XSHAPE = (1, 3, 32, 32)
+
+
+def measure_cost(genotype, C, num_classes, layers, xshape=(1, 3, 32, 32)):
+    """EMU (EXP-006): FLOPs (M) y params (MB) de la arquitectura DISCRETA (no del supernet).
+    Se construye NetworkCIFAR en CPU desde el genotipo y se mide con get_model_infos."""
+    if len(xshape) == 3:                       # asegurar dimensión de batch
+        xshape = (1,) + tuple(xshape)
+    net = NetworkCIFAR(C, num_classes, layers, False, genotype)
+    info = get_model_infos(net, xshape)
+    flops, params = float(info[0]), float(info[1])
+    del net
+    return flops, params
+
+
+def pareto_front(df):
+    """EMU (EXP-006): conjunto no-dominado sobre (arch_score ↑, flops ↓, params ↓)."""
+    d = df.dropna(subset=["arch_score", "flops", "params"]).reset_index(drop=True)
+    if d.empty:
+        return d
+    obj = d[["arch_score", "flops", "params"]].to_numpy(float) * np.array([1.0, -1.0, -1.0])
+    n = len(obj)
+    keep = np.ones(n, bool)
+    for i in range(n):
+        if not keep[i]:
+            continue
+        for j in range(n):
+            if i != j and np.all(obj[j] >= obj[i]) and np.any(obj[j] > obj[i]):
+                keep[i] = False
+                break
+    return d[keep].sort_values("arch_score", ascending=False).reset_index(drop=True)
 
 
 def eval_arch(data_loader, model, criterion):
@@ -208,6 +249,7 @@ def evaluate(
             series["arch_top1"],
             series["arch_top5"],
         )
+        flops, params = series["flops"], series["params"]   # EMU: coste cacheado
         if pop_flag:
             logging.info(
                 f'[INFO] ({ind+1:03d}/{pop_size:03d}) already evaluated in generation {series["generation"]}'
@@ -251,6 +293,11 @@ def evaluate(
             arch_loss_list.append(arch_loss)
             arch_top5_list.append(arch_top5)
 
+        # EMU (EXP-006): coste (FLOPs/params) de la arquitectura discreta recién muestreada
+        flops, params = measure_cost(
+            genotype_tmp, args.init_channels, _NUM_CLASSES, args.layers, _XSHAPE
+        )
+
         # Appending the newly sample architecture to the main dataframe
         d_tmp = {
             "genotype": genotype_tmp,
@@ -260,6 +307,8 @@ def evaluate(
             "arch_top5": arch_top5_list,
             "arch": alphax,
             "generation": gen,
+            "flops": flops,
+            "params": params,
         }
         # df = df.append(d_tmp, ignore_index=True)
         df = pd.concat([df, pd.DataFrame([d_tmp])], ignore_index=True)
@@ -272,7 +321,7 @@ def evaluate(
     if not pop_flag:
         return df, arch_loss_list, arch_top1_list, arch_top5_list
     else:
-        return df, arch_top1_list[0]
+        return df, arch_top1_list[0], flops, params   # EMU: + coste para el fitness multi-objetivo
 
 
 def main(args):
@@ -380,6 +429,10 @@ def main(args):
         )
     )
 
+    # EMU (EXP-006): exponer num_classes/xshape a measure_cost (usado dentro de evaluate)
+    global _NUM_CLASSES, _XSHAPE
+    _NUM_CLASSES, _XSHAPE = num_classes, xshape
+
     # Model Initialization
     model = Network(args.init_channels, num_classes, args.layers, device)
     model = model.to(device)
@@ -405,6 +458,8 @@ def main(args):
         seed=args.seed,
         n_max_resampling=100,
         population_size=args.pop_size,
+        multi_objective=args.multi_objective,   # EMU: Pareto (acc, flops, params)
+        obj_directions=[1, -1, -1],
     )
     mean_list, cov_list, genotype_list = [], [], []
     mean_list.append(cmaes_optimizer._mean.copy())
@@ -420,6 +475,8 @@ def main(args):
             "arch_top5",
             "arch",
             "arch_score",
+            "flops",     # EMU (EXP-006)
+            "params",    # EMU (EXP-006)
         ]
     )
 
@@ -450,7 +507,7 @@ def main(args):
                 tx = list(torch.chunk(tx, 2))
                 tx = [ttx.reshape(model.arch_parameters()[0].shape) for ttx in tx]
 
-                df, arch_score = evaluate(
+                df, arch_score, flops, params = evaluate(
                     valid_loader=valid_loader,
                     criterion=criterion,
                     df=df,
@@ -463,9 +520,13 @@ def main(args):
                     pop_size=cmaes_optimizer.population_size,
                 )
                 logging.info(
-                    f"[INFO] Score of the architecture, {arch_score}:{arch_score:.5f} finished in {(time.time()-ind_start)/60:.3f} minutes"
+                    f"[INFO] Score of the architecture, {arch_score}:{arch_score:.5f} (flops {flops:.2f}M, params {params:.3f}MB) finished in {(time.time()-ind_start)/60:.3f} minutes"
                 )
-                solutions.append((x, arch_score))
+                # EMU (EXP-006): fitness multi-objetivo (acc↑, flops↓, params↓) o escalar
+                if args.multi_objective:
+                    solutions.append((x, np.array([arch_score, flops, params], dtype=np.float64)))
+                else:
+                    solutions.append((x, arch_score))
 
             if epoch < total_epochs:
                 logging.info(
@@ -554,6 +615,24 @@ def main(args):
 
     with open(os.path.join(DIR, "genotype_list.pickle"), "wb") as f:
         pickle.dump(genotype_list, f)
+
+    # EMU (EXP-006): frente de Pareto (proxy-acc OSM ↑, FLOPs ↓, params ↓) + tabla de objetivos.
+    # Nota: arch_score es la accuracy proxy del OSM (weight-sharing); la accuracy final "standalone"
+    # de cada arq del frente se obtiene entrenándola aparte (eval_arch / train_cifar10).
+    try:
+        cols = ["genotype", "arch_score", "flops", "params", "generation"]
+        dfo = df[cols].copy()
+        dfo["genotype"] = dfo["genotype"].astype(str)
+        dfo.to_csv(os.path.join(DIR, "archdf_objectives.csv"), index=False)
+        front = pareto_front(df)[cols].copy()
+        front["genotype"] = front["genotype"].astype(str)
+        front.to_csv(os.path.join(DIR, "pareto_front.csv"), index=False)
+        logging.info(
+            f"[INFO] EMU front: {len(front)} arqs no-dominadas sobre {len(df)} evaluadas "
+            f"(multi_objective={args.multi_objective})"
+        )
+    except Exception as e:
+        logging.info(f"[WARN] EMU front export falló: {e!r}")
 
 
 if __name__ == "__main__":
