@@ -162,6 +162,7 @@ def measure_cost(genotype, C, num_classes, layers, xshape=(1, 3, 32, 32)):
     if len(xshape) == 3:                       # asegurar dimensión de batch
         xshape = (1,) + tuple(xshape)
     net = NetworkCIFAR(C, num_classes, layers, False, genotype)
+    net.drop_path_prob = 0.0                   # forward de NetworkCIFAR lo requiere (solo medir, sin drop-path)
     info = get_model_infos(net, xshape)
     flops, params = float(info[0]), float(info[1])
     del net
