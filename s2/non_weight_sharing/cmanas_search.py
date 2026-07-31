@@ -39,7 +39,17 @@ parser.add_argument('--seed', type = int, default=-1, help = 'random seed')
 parser.add_argument('--track_running_stats', action = 'store_true', default = False, help = 'use track_running_stats in BN layer')
 # EMU: multi-objective (Pareto) selection over (accuracy, FLOPs, params). Off -> original single-objective CMANAS.
 parser.add_argument('--multi_objective', action = 'store_true', default = False, help = 'EMU: Pareto selection over accuracy/FLOPs/params (default: single-objective accuracy)')
+# EMU ablation (EXP-011): weighted-sum SCALARIZATION of the same 3 objectives instead of Pareto ranking.
+# Scalar fitness (maximise) = w_acc*(acc/100) - w_flops*(flops/norm_flops) - w_params*(params/norm_params).
+# Trace a front by sweeping the weights across runs; --scalarize and --multi_objective are mutually exclusive.
+parser.add_argument('--scalarize', action = 'store_true', default = False, help = 'EMU ablation: weighted-sum scalarization (vs Pareto)')
+parser.add_argument('--w_acc', type = float, default = 1.0, help = 'scalarization weight for accuracy')
+parser.add_argument('--w_flops', type = float, default = 1.0, help = 'scalarization weight for FLOPs (cost)')
+parser.add_argument('--w_params', type = float, default = 1.0, help = 'scalarization weight for params (cost)')
+parser.add_argument('--norm_flops', type = float, default = 250.0, help = 'FLOPs normaliser (M) for scalarization (HV nadir)')
+parser.add_argument('--norm_params', type = float, default = 1.6, help = 'params normaliser (MB) for scalarization (HV nadir)')
 args = parser.parse_args()
+assert not (args.scalarize and args.multi_objective), '--scalarize and --multi_objective are mutually exclusive'
 
 datasets = ['cifar10', 'cifar100', 'ImageNet16-120']
 assert args.dataset in datasets, 'Incorrect dataset'
@@ -194,8 +204,14 @@ def main(args, api):
 
       logging.info(f'[INFO] Evaluating ({ind+1:03d}/{cmaes_optimizer.population_size:03d}) valid_acc: {valid_acc:.5f} flops: {flops} params: {params} finished in {(time.time()-ind_start):.5f} seconds')
       # EMU (EXP-003): multi-objective fitness = (valid_acc, flops, params); else scalar accuracy.
+      # EMU ablation (EXP-011): --scalarize -> single weighted-sum of the SAME 3 objectives.
       if args.multi_objective:
         solutions.append((x, np.array([valid_acc, flops, params], dtype=np.float64)))
+      elif args.scalarize:
+        scalar = (args.w_acc*(valid_acc/100.0)
+                  - args.w_flops*(flops/args.norm_flops)
+                  - args.w_params*(params/args.norm_params))
+        solutions.append((x, scalar))
       else:
         solutions.append((x, valid_acc))
 
