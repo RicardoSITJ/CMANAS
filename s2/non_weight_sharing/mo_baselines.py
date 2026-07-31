@@ -144,17 +144,20 @@ def one_run(api, run_idx, seed):
     best = archdf.sort_values('test_acc', ascending=False).iloc[0]
     logging.info('[EXP-004] run {} done: {} evals, front={}, best_test={:.3f}, {:.1f}s'.format(
         run_idx, len(archdf), len(front), best['test_acc'], time.time() - t0))
-    return {'run': run_idx, 'valid': best['valid_acc'], 'test': best['test_acc'], 'time': time.time() - t0}
+    return {'run': run_idx, 'seed': seed, 'valid': best['valid_acc'], 'test': best['test_acc'], 'time': time.time() - t0}
 
 
 if __name__ == '__main__':
     api = API(args.api_path, verbose=False)
     rec = '{}.csv'.format(args.record_filename)
     rows = []
-    if args.seed is None or args.seed < 0:
-        for i in range(args.ntrials):
-            rows.append(one_run(api, i + 1, random.randint(1, 100000)))
-    else:
-        rows.append(one_run(api, 1, args.seed))
+    # Reproducibility (EMU): non-negative --seed is the BASE of a DETERMINISTIC per-trial
+    # seed sequence (base..base+ntrials-1); e.g. `--seed 0 --ntrials 500` -> seeds 0..499.
+    # Each seed is fixed AND logged (one_run stores 'seed' in its row). --seed < 0 keeps the
+    # legacy random-per-trial behaviour but now also logs the random seed actually used.
+    base_seed = args.seed
+    for i in range(args.ntrials):
+        s = random.randint(1, 100000) if (base_seed is None or base_seed < 0) else base_seed + i
+        rows.append(one_run(api, i + 1, s))
     pd.DataFrame(rows).set_index('run').to_csv(rec)
     logging.info('[EXP-004] wrote summary {}'.format(rec))

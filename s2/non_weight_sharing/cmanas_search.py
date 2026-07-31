@@ -264,7 +264,7 @@ def main(args, api):
   front.to_csv(f'{base}-front-run{args.run}.csv', index=False)
   logging.info(f'[INFO] Pareto front (run {args.run}): {len(front)} architectures over {len(arch_df)} evaluated')
 
-  tmp_a = {'run': args.run, 'valid': best_arch_per_epoch[-1][2], 'test': best_arch_per_epoch[-1][1], 'time': time.time()-epoch_start}
+  tmp_a = {'run': args.run, 'seed': args.seed, 'valid': best_arch_per_epoch[-1][2], 'test': best_arch_per_epoch[-1][1], 'time': time.time()-epoch_start}
 
   df = pd.DataFrame([tmp_a])
   df = df.set_index('run')
@@ -276,11 +276,14 @@ def main(args, api):
 if __name__ == '__main__':
   api = API(args.api_path, verbose = False)
   args.record_filename = '{}.csv'.format(args.record_filename)
-  if args.seed is None or args.seed < 0:
-    for index in range(args.ntrials):
-      args.run = index+1
-      args.seed = random.randint(1, 100000)
-      main(args, api)
-  else:
+  # Reproducibility (EMU): a non-negative --seed is the BASE of a DETERMINISTIC
+  # per-trial seed sequence (base, base+1, ..., base+ntrials-1); e.g. `--seed 0
+  # --ntrials 500` -> seeds 0..499. Each per-trial seed is fixed AND logged (tmp_a['seed']
+  # + the per-run CSV filename carries the run index). --seed < 0 keeps the legacy
+  # random-per-trial behaviour but now ALSO logs the random seed actually used.
+  base_seed = args.seed
+  for index in range(args.ntrials):
+    args.run = index + 1
+    args.seed = random.randint(1, 100000) if (base_seed is None or base_seed < 0) else base_seed + index
     main(args, api)
 
