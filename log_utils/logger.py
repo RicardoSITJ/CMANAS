@@ -9,8 +9,16 @@ if sys.version_info.major == 2: # Python 2.x
 else:                           # Python 3.x
   from io import BytesIO as BIO
 
+# tensorflow is optional and only used when a Logger is created with use_tf=True.
+# On some Kaggle images tensorflow is installed but broken (pyOpenSSL GEN_EMAIL crash on
+# import), so a plain find_spec+import aborts the whole pipeline. Import defensively.
+tf = None
 if importlib.util.find_spec('tensorflow'):
-  import tensorflow as tf
+  try:
+    import tensorflow as tf
+  except Exception as _e:
+    warnings.warn(f'tensorflow present but failed to import ({_e}); continuing without it.')
+    tf = None
 
 
 class PrintLogger(object):
