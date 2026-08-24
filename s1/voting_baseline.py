@@ -38,6 +38,10 @@ parser.add_argument("--gpu", type=int, default=0)
 parser.add_argument("--log_path", type=str, default=None)
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--num_classes", type=int, default=7)
+# ut._data_transforms_ckplus() reads args.cutout/args.cutout_length (only used to build the
+# train transform, which voting ignores) -> they must exist on the namespace.
+parser.add_argument("--cutout", action="store_true", default=False)
+parser.add_argument("--cutout_length", type=int, default=16)
 parser.add_argument("--model_paths", nargs="+", required=True,
                     help="List of fine-tuned baseline model paths for N-model voting")
 args = parser.parse_args()
