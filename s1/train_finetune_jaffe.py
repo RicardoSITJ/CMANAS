@@ -26,7 +26,17 @@ import visualize
 import genotypes
 from model import NetworkCIFAR as Network
 from torch.autograd import Variable
-from torch.utils.tensorboard import SummaryWriter
+try:
+    from torch.utils.tensorboard import SummaryWriter
+except Exception:
+    # Kaggle image ships a broken tensorboard/tensorflow; TB logging isn't needed for results.
+    class SummaryWriter:
+        def __init__(self, *a, **k):
+            pass
+        def add_scalar(self, *a, **k):
+            pass
+        def close(self):
+            pass
 
 parser = argparse.ArgumentParser("cifar10")
 parser.add_argument("--data", type=str, default="../data")
@@ -51,6 +61,8 @@ parser.add_argument("--save", type=str, default="EXP")
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--arch", type=str, default="DARTS")
 parser.add_argument("--grad_clip", type=float, default=5)
+parser.add_argument("--num_workers", type=int, default=0,
+                    help="DataLoader workers (speeds up large datasets; deterministic via seed_worker)")
 parser.add_argument(
     "--finetune",
     type=lambda x: x.lower() == "true",
@@ -154,7 +166,7 @@ def main():
         batch_size=args.batch_size,
         shuffle=True,
         pin_memory=True,
-        num_workers=0,
+        num_workers=args.num_workers,
         generator=g,
         worker_init_fn=seed_worker,
     )
@@ -163,7 +175,7 @@ def main():
         batch_size=args.batch_size,
         shuffle=False,
         pin_memory=True,
-        num_workers=0,
+        num_workers=args.num_workers,
         generator=g,
         worker_init_fn=seed_worker,
     )

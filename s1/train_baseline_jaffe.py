@@ -74,6 +74,7 @@ parser.add_argument("--cutout_length", type=int, default=16)
 parser.add_argument("--save", type=str, default="EXP")
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--grad_clip", type=float, default=5)
+parser.add_argument("--num_workers", type=int, default=0, help="DataLoader workers (deterministic via seed_worker)")
 args = parser.parse_args()
 
 if args.seed is None or args.seed < 0:
@@ -137,10 +138,10 @@ def main():
 
     train_queue = torch.utils.data.DataLoader(
         train_data, batch_size=args.batch_size, shuffle=True, pin_memory=True,
-        num_workers=0, generator=g, worker_init_fn=seed_worker)
+        num_workers=args.num_workers, generator=g, worker_init_fn=seed_worker)
     valid_queue = torch.utils.data.DataLoader(
         valid_data, batch_size=args.batch_size, shuffle=False, pin_memory=True,
-        num_workers=0, generator=g, worker_init_fn=seed_worker)
+        num_workers=args.num_workers, generator=g, worker_init_fn=seed_worker)
 
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, float(args.epochs))
 
