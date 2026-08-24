@@ -34,7 +34,19 @@ import gc
 from procedures import seed_everything, seed_worker
 import ut
 from torch.autograd import Variable
-from torch.utils.tensorboard import SummaryWriter
+try:
+    from torch.utils.tensorboard import SummaryWriter
+except Exception:
+    # Some Kaggle images ship a broken tensorboard/tensorflow (e.g. tensorboard.compat
+    # 'notf' ImportError). TensorBoard logging is not needed for results, so fall back
+    # to a no-op writer that keeps the training loop's writer.add_scalar(...) calls valid.
+    class SummaryWriter:
+        def __init__(self, *a, **k):
+            pass
+        def add_scalar(self, *a, **k):
+            pass
+        def close(self):
+            pass
 from baseline_models import build_baseline
 
 parser = argparse.ArgumentParser("cmanas-fer-baseline")
