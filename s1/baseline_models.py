@@ -15,6 +15,60 @@ import torch.nn as nn
 import torchvision.models as tvm
 
 
+# ---------------------------------------------------------------------------
+# MobileFaceNet (Chen et al., 2018) — ~1M-param face-specific lightweight net.
+# Reviewer R3 named it explicitly. Not in torchvision, so implemented here with
+# the canonical bottleneck setting + an adaptive-pooling classification head so it
+# runs at the paper's 48x48 input (native MobileFaceNet expects 112x112).
+# ---------------------------------------------------------------------------
+def _conv_bn_prelu(inp, oup, k=3, s=1, p=1, groups=1):
+    return nn.Sequential(
+        nn.Conv2d(inp, oup, k, s, p, groups=groups, bias=False),
+        nn.BatchNorm2d(oup),
+        nn.PReLU(oup),
+    )
+
+
+class _Bottleneck(nn.Module):
+    """Inverted residual with PReLU (MobileFaceNet style)."""
+    def __init__(self, inp, oup, stride, expansion):
+        super().__init__()
+        hidden = inp * expansion
+        self.use_res = stride == 1 and inp == oup
+        self.conv = nn.Sequential(
+            _conv_bn_prelu(inp, hidden, k=1, s=1, p=0),                 # expand 1x1
+            _conv_bn_prelu(hidden, hidden, k=3, s=stride, p=1, groups=hidden),  # dw 3x3
+            nn.Conv2d(hidden, oup, 1, 1, 0, bias=False),               # project 1x1 (linear)
+            nn.BatchNorm2d(oup),
+        )
+
+    def forward(self, x):
+        return x + self.conv(x) if self.use_res else self.conv(x)
+
+
+class MobileFaceNet(nn.Module):
+    def __init__(self, num_classes=7):
+        super().__init__()
+        # (expansion t, out c, num n, stride s) — canonical MobileFaceNet
+        setting = [(2, 64, 5, 2), (4, 128, 1, 2), (2, 128, 6, 1), (4, 128, 1, 2), (2, 128, 2, 1)]
+        layers = [_conv_bn_prelu(3, 64, k=3, s=2, p=1),                # stem
+                  _conv_bn_prelu(64, 64, k=3, s=1, p=1, groups=64)]    # depthwise
+        inp = 64
+        for t, c, n, s in setting:
+            for i in range(n):
+                layers.append(_Bottleneck(inp, c, s if i == 0 else 1, t))
+                inp = c
+        layers.append(_conv_bn_prelu(inp, 512, k=1, s=1, p=0))         # 1x1 -> 512
+        self.features = nn.Sequential(*layers)
+        self.pool = nn.AdaptiveAvgPool2d(1)                            # adaptive: any input size
+        self.classifier = nn.Linear(512, num_classes)
+
+    def forward(self, x):
+        x = self.features(x)
+        x = self.pool(x).flatten(1)
+        return self.classifier(x)
+
+
 # name -> (constructor, weights-enum-name). Weights enums used when available
 # (torchvision >= 0.13); we fall back to pretrained=True on older versions.
 _SUPPORTED = {
@@ -39,6 +93,9 @@ def _replace_classifier(name, model, num_classes):
 
 def build_backbone(name, num_classes, pretrained=True):
     name = name.lower()
+    if name == "mobilefacenet":
+        # No ImageNet weights exist for MobileFaceNet -> trained from scratch (noted in FINDINGS).
+        return MobileFaceNet(num_classes=num_classes)
     if name not in _SUPPORTED:
         raise ValueError(
             f"Unknown backbone '{name}'. Supported: {sorted(_SUPPORTED)}"
